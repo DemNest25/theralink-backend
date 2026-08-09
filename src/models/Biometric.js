@@ -19,6 +19,10 @@ const biometricSchema = new mongoose.Schema(
       required: true,
       default: Date.now
     },
+    deviceId: {
+      type: String,    // serial del wearable que originó la lectura
+      default: null
+    },
 
     // ── Frecuencia cardíaca ──────────────────────────────
     heartRate: {
@@ -74,8 +78,10 @@ const biometricSchema = new mongoose.Schema(
       max: 100,
       default: null
     }
+  },
+  {
+    timestamps: true // createdAt/updatedAt para auditoría de ingesta; `timestamp` sigue siendo la hora de la lectura
   }
-  // Sin timestamps — ya tenemos campo timestamp propio
 );
 
 // Índice compuesto para queries de dashboard

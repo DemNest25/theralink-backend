@@ -1,4 +1,5 @@
 const Biometric = require('../models/Biometric');
+const Session = require('../models/Session');
 const mongoose = require('mongoose');
 
 // POST /api/biometrics
@@ -74,4 +75,34 @@ const getBiometricSummary = async (req, res) => {
   }
 };
 
-module.exports = { createBiometric, getBiometricsBySession, getBiometricSummary };
+// POST /api/biometrics/:sessionId — ingesta por lote desde el Watch (auth por API key de dispositivo)
+const ingestReadings = async (req, res) => {
+  try {
+    const { sessionId } = req.params;
+    const { readings } = req.body;
+
+    const session = await Session.findById(sessionId);
+    if (!session) {
+      return res.status(404).json({ error: 'Sesión no encontrada' });
+    }
+
+    if (session.patient.toString() !== req.device.patient.toString()) {
+      return res.status(403).json({ error: 'Sesión no corresponde a este dispositivo' });
+    }
+
+    const docs = readings.map(reading => ({
+      ...reading,
+      session: sessionId,
+      patient: req.device.patient,
+      deviceId: req.device.deviceId
+    }));
+
+    const inserted = await Biometric.insertMany(docs);
+
+    res.status(201).json({ inserted: inserted.length });
+  } catch (err) {
+    res.status(500).json({ message: 'Error del servidor', error: err.message });
+  }
+};
+
+module.exports = { createBiometric, getBiometricsBySession, getBiometricSummary, ingestReadings };
