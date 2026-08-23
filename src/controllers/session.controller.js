@@ -81,7 +81,7 @@ const updateSession = async (req, res) => {
     const session = await Session.findByIdAndUpdate(
       req.params.id,
       updates,
-      { new: true, runValidators: true }
+      { returnDocument: 'after', runValidators: true }
     );
 
     if (!session) {

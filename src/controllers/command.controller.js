@@ -42,7 +42,7 @@ const markExecuted = async (req, res) => {
     const command = await SessionCommand.findByIdAndUpdate(
       req.params.commandId,
       { status: 'executed', executedAt: new Date() },
-      { new: true }
+      { returnDocument: 'after' }
     );
 
     if (!command) {
