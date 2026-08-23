@@ -9,6 +9,7 @@ const sendCommand = async (req, res) => {
 
     const command = await SessionCommand.create({
       session:     req.params.id,
+      issuedBy:    req.user.id, // viene de protect (JWT)
       commandType,
       payload:     payload || {}
     });
@@ -20,7 +21,7 @@ const sendCommand = async (req, res) => {
 };
 
 // GET /api/sessions/:id/command/pending
-// UE5 consulta cada 500ms–1s si hay comandos nuevos
+// UE5 consulta cada 3 segundos si hay comandos nuevos
 const getPendingCommands = async (req, res) => {
   try {
     const commands = await SessionCommand.find({
