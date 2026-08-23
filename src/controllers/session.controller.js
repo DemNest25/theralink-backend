@@ -109,4 +109,26 @@ const deleteSession = async (req, res) => {
   }
 };
 
-module.exports = { createSession, getSessions, getSessionById, updateSession, deleteSession };
+const getActiveSessionForDevice = async (req, res) => {
+  try {
+    const session = await Session.findOne({
+      patient: req.device.patient,
+      status: 'active'
+    }).sort({ startTime: -1 });
+
+    if (!session) {
+      return res.status(404).json({ message: 'No hay sesión activa para este paciente' });
+    }
+
+    res.json({
+      sessionId: session._id,
+      environment: session.environment,
+      status: session.status,
+      startTime: session.startTime
+    });
+  } catch (err) {
+    res.status(500).json({ message: 'Error del servidor', error: err.message });
+  }
+};
+
+module.exports = { createSession, getSessions, getSessionById, updateSession, deleteSession, getActiveSessionForDevice };

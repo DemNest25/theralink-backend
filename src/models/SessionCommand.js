@@ -9,6 +9,11 @@ const sessionCommandSchema = new mongoose.Schema(
       required: true,
       index: true
     },
+    issuedBy: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'User',
+      required: true
+    },
     commandType: {
       type: String,
       required: true,

@@ -29,7 +29,7 @@ const biometricSchema = new mongoose.Schema(
       type: Number,
       min: 30,
       max: 220,
-      required: true
+      required: false
     },
     ibi: {
       type: Number,    // intervalo entre latidos en ms

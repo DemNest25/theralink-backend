@@ -6,8 +6,13 @@ const {
   getSessions,
   getSessionById,
   updateSession,
-  deleteSession
+  deleteSession,
+  getActiveSessionForDevice
 } = require('../controllers/session.controller');
+
+const { authenticateDevice } = require('../middleware/device.middleware');
+
+router.get('/active', authenticateDevice, getActiveSessionForDevice);
 
 router.use(protect); // todas las rutas de sesiones requieren JWT
 
