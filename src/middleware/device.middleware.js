@@ -32,4 +32,11 @@ const authenticateDevice = async (req, res, next) => {
   }
 };
 
-module.exports = { authenticateDevice };
+const requireDeviceType = (type) => (req, res, next) => {
+  if (req.device.type !== type) {
+    return res.status(403).json({ error: `Solo dispositivos de tipo '${type}'` });
+  }
+  next();
+};
+
+module.exports = { authenticateDevice, requireDeviceType };
