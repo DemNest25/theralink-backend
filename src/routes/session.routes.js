@@ -10,6 +10,13 @@ const {
   getActiveSessionForDevice
 } = require('../controllers/session.controller');
 
+const {
+  startSession,
+  pauseSession,
+  resumeSession,
+  endSession
+} = require('../controllers/sessionControl.controller');
+
 const { authenticateDevice } = require('../middleware/device.middleware');
 const commandRoutes = require('./command.routes');
 
@@ -25,5 +32,10 @@ router.get('/',      getSessions);
 router.get('/:id',   getSessionById);
 router.patch('/:id', updateSession);
 router.delete('/:id',deleteSession);
+
+router.post('/:id/start',  startSession);
+router.post('/:id/pause',  pauseSession);
+router.post('/:id/resume', resumeSession);
+router.post('/:id/end',    endSession);
 
 module.exports = router;
