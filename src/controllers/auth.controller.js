@@ -26,7 +26,7 @@ const login = async (req, res, next) => {
     const { email, password } = req.body;
 
     const user = await User.findOne({ email });
-    if (!user) {
+    if (!user || user.isActive === false) {
       return res.status(401).json({ message: 'Credenciales inválidas' });
     }
 

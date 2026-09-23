@@ -81,6 +81,14 @@ const ingestReadings = async (req, res, next) => {
     const { sessionId } = req.params;
     const { readings } = req.body;
 
+    if (!req.device.patient) {
+      return res.status(403).json({ error: 'Dispositivo sin paciente vinculado' });
+    }
+
+    if (!Array.isArray(readings) || readings.length === 0) {
+      return res.status(400).json({ message: 'readings debe ser un arreglo no vacío' });
+    }
+
     const session = await Session.findById(sessionId);
     if (!session) {
       return res.status(404).json({ error: 'Sesión no encontrada' });
@@ -90,16 +98,32 @@ const ingestReadings = async (req, res, next) => {
       return res.status(403).json({ error: 'Sesión no corresponde a este dispositivo' });
     }
 
-    const docs = readings.map(reading => ({
+    if (!['en_curso', 'pausada'].includes(session.status)) {
+      return res.status(409).json({ message: 'La sesión no está activa', code: 'SESSION_CLOSED' });
+    }
+
+    // Entradas que no son objetos cuentan como rechazadas (no se insertan vacías)
+    const validShape = readings.filter(r => r && typeof r === 'object' && !Array.isArray(r));
+
+    const docs = validShape.map(reading => ({
       ...reading,
       session: sessionId,
       patient: req.device.patient,
       deviceId: req.device.deviceId
     }));
 
-    const inserted = await Biometric.insertMany(docs);
+    // ordered:false → las lecturas que fallan validación (fuera de rango) se
+    // descartan y el resto se inserta; devuelve solo las insertadas.
+    const inserted = docs.length > 0
+      ? await Biometric.insertMany(docs, { ordered: false })
+      : [];
+    const rejected = readings.length - inserted.length;
 
-    res.status(201).json({ inserted: inserted.length });
+    if (inserted.length === 0 && rejected > 0) {
+      return res.status(400).json({ message: 'Ninguna lectura válida en el lote', rejected });
+    }
+
+    res.status(201).json({ inserted: inserted.length, rejected });
   } catch (err) {
     next(err);
   }

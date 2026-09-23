@@ -161,10 +161,10 @@ const deleteSession = async (req, res, next) => {
 
 const getActiveSessionForDevice = async (req, res, next) => {
   try {
-    // Device sin patient (ej. un Quest, o un watch nunca vinculado): no hay
-    // nada que buscar, no es un error — el reloj lo trata como "no hay sesión".
+    // Contrato del reloj: "sin sesión" se detecta por el 404, no por el cuerpo.
+    // Un device sin patient (watch sin vincular) tampoco tiene sesión.
     if (!req.device.patient) {
-      return res.status(200).json({ message: 'No hay sesión activa para este paciente' });
+      return res.status(404).json({ message: 'No hay sesión activa para este paciente' });
     }
 
     const session = await Session.findOne({
@@ -172,15 +172,17 @@ const getActiveSessionForDevice = async (req, res, next) => {
       status: { $in: ['en_curso', 'pausada'] }
     })
       .sort({ startTime: -1 })
-      .populate('environment', 'name displayName');
+      .populate('environment', 'displayName');
 
     if (!session) {
       return res.status(404).json({ message: 'No hay sesión activa para este paciente' });
     }
 
+    // `environment` debe seguir siendo un string (el reloj lo parsea como String?).
     res.json({
       sessionId: session._id,
-      environment: session.environment,
+      environment: String(session.populated('environment') ?? session.environment),
+      environmentName: session.environment?.displayName ?? null,
       status: session.status,
       startTime: session.startTime
     });

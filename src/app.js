@@ -20,7 +20,6 @@ app.use('/api/patients',  require('./routes/patient.routes'));
 app.use('/api/biometrics',require('./routes/biometric.routes'));
 app.use('/api/environments', require('./routes/environment.routes'));
 app.use('/api/users', require('./routes/user.routes'));
-app.use('/api/sessions/:id/command', require('./routes/command.routes'));
 
 app.use(require('./middleware/errorHandler'));
 
