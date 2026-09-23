@@ -1,6 +1,8 @@
 const Session = require('../models/Session');
 const User = require('../models/User');
 const { assertTransition, InvalidTransitionError } = require('../utils/sessionState');
+const { loadOwnedSession } = require('../utils/ownership');
+const { closeSession } = require('../utils/sessionLifecycle');
 
 // POST /api/sessions
 // therapist sale del JWT, no del body. environment sale de patient.phobia.
@@ -38,19 +40,17 @@ const createSession = async (req, res, next) => {
   }
 };
 
-// GET /api/sessions
+// GET /api/sessions — siempre solo las del terapeuta autenticado
 const getSessions = async (req, res, next) => {
   try {
-    const { patient, therapist } = req.query;
-    const filter = {};
-
-    if (patient)   filter.patient   = patient;
-    if (therapist) filter.therapist = therapist;
+    const filter = { therapist: req.user.id };
+    if (req.query.patient) filter.patient = req.query.patient;
 
     const sessions = await Session.find(filter)
       .populate('patient',   'name email')
       .populate('therapist', 'name email')
       .populate('environment', 'name displayName difficultyLevels')
+      .populate('scenario', 'key name order')
       .sort({ createdAt: -1 });
 
     res.json(sessions);
@@ -62,14 +62,15 @@ const getSessions = async (req, res, next) => {
 // GET /api/sessions/:id
 const getSessionById = async (req, res, next) => {
   try {
-    const session = await Session.findById(req.params.id)
-      .populate('patient',   'name email')
-      .populate('therapist', 'name email')
-      .populate('environment', 'name displayName difficultyLevels');
+    const session = await loadOwnedSession(req.params.id, req.user.id);
 
-    if (!session) {
-      return res.status(404).json({ message: 'Sesión no encontrada' });
-    }
+    await session.populate([
+      { path: 'patient',     select: 'name email' },
+      { path: 'therapist',   select: 'name email' },
+      { path: 'environment', select: 'name displayName difficultyLevels' },
+      { path: 'scenario',    select: 'key name order' },
+      { path: 'device',      select: 'deviceId name type' }
+    ]);
 
     res.json(session);
   } catch (err) {
@@ -78,64 +79,35 @@ const getSessionById = async (req, res, next) => {
 };
 
 // PATCH /api/sessions/:id
+// Genérico: notas/ansiedad y cierre manual (cancelada|finalizada). Iniciar,
+// pausar, reanudar y terminar van por los endpoints de control de sesión.
 const updateSession = async (req, res, next) => {
   try {
-    const allowed = ['status', 'anxietyLevel', 'therapistNotes', 'endTime'];
-    const updates = {};
+    const session = await loadOwnedSession(req.params.id, req.user.id);
+    const { status, anxietyLevel, therapistNotes } = req.body;
 
-    allowed.forEach(field => {
-      if (req.body[field] !== undefined) updates[field] = req.body[field];
-    });
-
-    if (updates.status !== undefined) {
-      const current = await Session.findById(req.params.id);
-      if (!current) {
-        return res.status(404).json({ message: 'Sesión no encontrada' });
+    if (status !== undefined) {
+      if (!['cancelada', 'finalizada'].includes(status)) {
+        return res.status(400).json({ message: 'Usa los endpoints de control de sesión' });
       }
 
       try {
-        assertTransition(current.status, updates.status);
+        assertTransition(session.status, status);
       } catch (err) {
         if (err instanceof InvalidTransitionError) {
           return res.status(err.status).json({ message: err.message });
         }
         throw err;
       }
-
-      // Un paciente no puede tener más de una sesión cargando/en_curso/pausada a la vez
-      if (updates.status === 'cargando') {
-        const conflicting = await Session.findOne({
-          _id: { $ne: current._id },
-          patient: current.patient,
-          status: { $in: ['cargando', 'en_curso', 'pausada'] }
-        });
-
-        if (conflicting) {
-          return res.status(409).json({ message: 'El paciente ya tiene otra sesión cargando, en curso o en pausa' });
-        }
-      }
-
-      // Primera vez que entra a en_curso (cargando → en_curso); al reanudar
-      // desde pausada, startTime ya está seteado y no se toca.
-      if (updates.status === 'en_curso' && !current.startTime) {
-        updates.startTime = new Date();
-      }
-
-      // Al cerrar la sesión, calcular duración descontando los intervalos de pauses
-      if (updates.status === 'finalizada' || updates.status === 'cancelada') {
-        updates.endTime = updates.endTime || new Date();
-        updates.durationMinutes = current.calculateDurationMinutes(updates.endTime);
-      }
     }
 
-    const session = await Session.findByIdAndUpdate(
-      req.params.id,
-      updates,
-      { returnDocument: 'after', runValidators: true }
-    );
+    if (anxietyLevel !== undefined) session.anxietyLevel = anxietyLevel;
+    if (therapistNotes !== undefined) session.therapistNotes = therapistNotes;
 
-    if (!session) {
-      return res.status(404).json({ message: 'Sesión no encontrada' });
+    if (status !== undefined) {
+      await closeSession(session, status); // valida y guarda todo
+    } else {
+      await session.save();
     }
 
     res.json({ message: 'Sesión actualizada', session });
@@ -147,11 +119,15 @@ const updateSession = async (req, res, next) => {
 // DELETE /api/sessions/:id
 const deleteSession = async (req, res, next) => {
   try {
-    const session = await Session.findByIdAndDelete(req.params.id);
+    const session = await loadOwnedSession(req.params.id, req.user.id);
 
-    if (!session) {
-      return res.status(404).json({ message: 'Sesión no encontrada' });
+    if (!['programada', 'cancelada'].includes(session.status)) {
+      return res.status(409).json({
+        message: 'Las sesiones realizadas son registro clínico y no se eliminan'
+      });
     }
+
+    await session.deleteOne();
 
     res.json({ message: 'Sesión eliminada' });
   } catch (err) {

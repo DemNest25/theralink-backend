@@ -1,7 +1,7 @@
 // src/routes/command.routes.js
 const express = require('express');
 const router = express.Router({ mergeParams: true }); // para acceder a :id de la ruta padre
-const { protect } = require('../middleware/auth.middleware');
+const { protect, restrictTo } = require('../middleware/auth.middleware');
 const { authenticateDevice } = require('../middleware/device.middleware');
 const { sendCommand, getPendingCommands, markExecuted } = require('../controllers/command.controller');
 
@@ -10,6 +10,6 @@ router.get(   '/pending',             authenticateDevice, getPendingCommands);
 router.patch( '/:commandId/executed', authenticateDevice, markExecuted);
 
 // Ruta de TERAPEUTA (dashboard) — requiere JWT
-router.post('/', protect, sendCommand);
+router.post('/', protect, restrictTo('therapist'), sendCommand);
 
 module.exports = router;

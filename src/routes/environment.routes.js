@@ -1,6 +1,6 @@
 const express = require('express');
 const router = express.Router();
-const { protect } = require('../middleware/auth.middleware');
+const { protect, restrictTo } = require('../middleware/auth.middleware');
 const {
   createEnvironment,
   getEnvironments,
@@ -9,8 +9,8 @@ const {
 
 router.use(protect);
 
-router.post('/',     createEnvironment);
+router.post('/',     restrictTo('admin'), createEnvironment);
 router.get('/',      getEnvironments);
-router.patch('/:id', updateEnvironment);
+router.patch('/:id', restrictTo('admin'), updateEnvironment);
 
 module.exports = router;

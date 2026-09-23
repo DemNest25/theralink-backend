@@ -35,6 +35,13 @@ const sessionSchema = new mongoose.Schema(
       enum: ['programada', 'cargando', 'en_curso', 'pausada', 'finalizada', 'cancelada'],
       default: 'programada'
     },
+    // Acción que el terapeuta pidió y el visor aún no confirma (la web muestra
+    // "Esperando al visor…" y bloquea botones)
+    pendingAction: {
+      type: String,
+      enum: ['start', 'pause', 'resume', 'end', null],
+      default: null
+    },
     // null al crear (status: programada). Se asigna una sola vez, la primera
     // vez que la sesión entra a en_curso (cargando → en_curso). No se toca al
     // reanudar desde pausada.

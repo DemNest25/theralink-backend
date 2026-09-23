@@ -1,14 +1,28 @@
 // src/controllers/command.controller.js
 const SessionCommand = require('../models/SessionCommand');
+const { loadOwnedSession } = require('../utils/ownership');
+
+const LIFECYCLE_COMMANDS = ['load_scenario', 'session_pause', 'session_resume', 'session_end'];
 
 // POST /api/sessions/:id/command
-// Terapeuta envía un comando desde el dashboard
+// Terapeuta envía un comando de escenario desde el dashboard (los de ciclo de
+// vida van por /start, /pause, /resume y /end)
 const sendCommand = async (req, res, next) => {
   try {
     const { commandType, payload } = req.body;
 
+    const session = await loadOwnedSession(req.params.id, req.user.id);
+
+    if (LIFECYCLE_COMMANDS.includes(commandType)) {
+      return res.status(400).json({ message: 'Usa los endpoints de control de sesión' });
+    }
+
+    if (session.status !== 'en_curso') {
+      return res.status(409).json({ message: 'La sesión no está en curso' });
+    }
+
     const command = await SessionCommand.create({
-      session:     req.params.id,
+      session:     session._id,
       issuedBy:    req.user.id, // viene de protect (JWT)
       commandType,
       payload:     payload || {}

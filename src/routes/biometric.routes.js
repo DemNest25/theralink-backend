@@ -1,9 +1,8 @@
 const express = require('express');
 const router = express.Router();
-const { protect } = require('../middleware/auth.middleware');
+const { protect, restrictTo } = require('../middleware/auth.middleware');
 const { authenticateDevice } = require('../middleware/device.middleware');
 const {
-  createBiometric,
   getBiometricsBySession,
   getBiometricSummary,
   ingestReadings
@@ -12,9 +11,8 @@ const {
 // Ingesta desde el Watch — autenticada por API key de dispositivo, no por JWT
 router.post('/:sessionId', authenticateDevice, ingestReadings);
 
-router.use(protect);
+router.use(protect, restrictTo('therapist'));
 
-router.post('/', createBiometric);
 router.get('/session/:sessionId',         getBiometricsBySession);
 router.get('/session/:sessionId/summary', getBiometricSummary);
 

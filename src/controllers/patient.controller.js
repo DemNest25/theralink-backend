@@ -33,6 +33,7 @@ const createPatient = async (req, res, next) => {
     res.status(201).json({
       message: 'Paciente creado',
       patient: {
+        _id: patient._id,
         id: patient._id,
         name: patient.name,
         email: patient.email,
@@ -58,4 +59,25 @@ const getPatients = async (req, res, next) => {
   }
 };
 
-module.exports = { createPatient, getPatients };
+// GET /api/patients/:id — perfil de un paciente propio
+const getPatientById = async (req, res, next) => {
+  try {
+    const patient = await User.findOne({
+      _id: req.params.id,
+      role: 'patient',
+      assignedTherapist: req.user.id
+    })
+      .select('-password')
+      .populate('phobia', 'name displayName');
+
+    if (!patient) {
+      return res.status(404).json({ message: 'Paciente no encontrado' });
+    }
+
+    res.json(patient);
+  } catch (err) {
+    next(err);
+  }
+};
+
+module.exports = { createPatient, getPatients, getPatientById };

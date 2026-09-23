@@ -1,31 +1,13 @@
 const Biometric = require('../models/Biometric');
 const Session = require('../models/Session');
 const mongoose = require('mongoose');
-
-// POST /api/biometrics
-const createBiometric = async (req, res, next) => {
-  try {
-    const {
-      session, patient, heartRate, ibi, hrv,
-      eda, ppgGreen, ppgRed, ppgInfrared,
-      skinTemperature, stressIndex, timestamp
-    } = req.body;
-
-    const biometric = await Biometric.create({
-      session, patient, heartRate, ibi, hrv,
-      eda, ppgGreen, ppgRed, ppgInfrared,
-      skinTemperature, stressIndex, timestamp
-    });
-
-    res.status(201).json({ message: 'Lectura biométrica registrada', biometric });
-  } catch (err) {
-    next(err);
-  }
-};
+const { loadOwnedSession } = require('../utils/ownership');
 
 // GET /api/biometrics/session/:sessionId
 const getBiometricsBySession = async (req, res, next) => {
   try {
+    await loadOwnedSession(req.params.sessionId, req.user.id);
+
     const biometrics = await Biometric.find({ session: req.params.sessionId })
       .sort({ timestamp: 1 }); // orden cronológico
 
@@ -38,6 +20,8 @@ const getBiometricsBySession = async (req, res, next) => {
 // GET /api/biometrics/session/:sessionId/summary
 const getBiometricSummary = async (req, res, next) => {
   try {
+    await loadOwnedSession(req.params.sessionId, req.user.id);
+
     const result = await Biometric.aggregate([
       { $match: { session: new mongoose.Types.ObjectId(req.params.sessionId) } },
       {
@@ -129,4 +113,4 @@ const ingestReadings = async (req, res, next) => {
   }
 };
 
-module.exports = { createBiometric, getBiometricsBySession, getBiometricSummary, ingestReadings };
+module.exports = { getBiometricsBySession, getBiometricSummary, ingestReadings };
