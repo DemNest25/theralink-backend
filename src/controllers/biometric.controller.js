@@ -2,6 +2,7 @@ const Biometric = require('../models/Biometric');
 const Session = require('../models/Session');
 const mongoose = require('mongoose');
 const { loadOwnedSession } = require('../utils/ownership');
+const { emitBiometricBatch } = require('../realtime/io');
 
 // GET /api/biometrics/session/:sessionId
 const getBiometricsBySession = async (req, res, next) => {
@@ -107,6 +108,7 @@ const ingestReadings = async (req, res, next) => {
       return res.status(400).json({ message: 'Ninguna lectura válida en el lote', rejected });
     }
 
+    emitBiometricBatch(sessionId, inserted);
     res.status(201).json({ inserted: inserted.length, rejected });
   } catch (err) {
     next(err);

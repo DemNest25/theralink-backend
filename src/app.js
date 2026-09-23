@@ -1,4 +1,5 @@
 // src/app.js
+const http = require('http');
 const express = require('express');
 const mongoose = require('mongoose');
 const cors = require('cors');
@@ -27,5 +28,8 @@ app.use('/api/devices', require('./routes/device.routes'));
 
 app.use(require('./middleware/errorHandler'));
 
+const server = http.createServer(app);
+require('./realtime/io').init(server);
+
 const PORT = process.env.PORT || 3000;
-app.listen(PORT, () => console.log(`✓ Servidor en puerto ${PORT}`));
+server.listen(PORT, () => console.log(`✓ Servidor en puerto ${PORT}`));

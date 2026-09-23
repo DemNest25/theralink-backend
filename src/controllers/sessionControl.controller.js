@@ -7,6 +7,7 @@ const SessionCommand = require('../models/SessionCommand');
 const Scenario = require('../models/Scenario');
 const Device = require('../models/Device');
 const { loadOwnedSession } = require('../utils/ownership');
+const { emitSessionStatus } = require('../realtime/io');
 const {
   ACTIVE_STATUSES,
   cancelPendingCommands,
@@ -88,6 +89,7 @@ const startSession = async (req, res, next) => {
       mapName: scenario.mapName
     });
 
+    emitSessionStatus(updated);
     res.json({ message: 'Sesión iniciándose, esperando al visor', session: updated });
   } catch (err) {
     next(err);
@@ -109,6 +111,7 @@ const pauseSession = async (req, res, next) => {
     }
 
     await createCommand(updated, req.user.id, 'session_pause');
+    emitSessionStatus(updated);
     res.json({ message: 'Pausa solicitada, esperando al visor', session: updated });
   } catch (err) {
     next(err);
@@ -130,6 +133,7 @@ const resumeSession = async (req, res, next) => {
     }
 
     await createCommand(updated, req.user.id, 'session_resume');
+    emitSessionStatus(updated);
     res.json({ message: 'Reanudación solicitada, esperando al visor', session: updated });
   } catch (err) {
     next(err);
@@ -152,6 +156,7 @@ const endSession = async (req, res, next) => {
 
     await cancelPendingCommands(updated._id);
     await createCommand(updated, req.user.id, 'session_end');
+    emitSessionStatus(updated);
     res.json({ message: 'Fin de sesión solicitado, esperando al visor', session: updated });
   } catch (err) {
     next(err);

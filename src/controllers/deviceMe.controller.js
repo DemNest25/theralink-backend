@@ -5,6 +5,7 @@ const Session = require('../models/Session');
 const SessionCommand = require('../models/SessionCommand');
 const { assertTransition, InvalidTransitionError } = require('../utils/sessionState');
 const { ACTIVE_STATUSES, closeSession } = require('../utils/sessionLifecycle');
+const { emitSessionStatus } = require('../realtime/io');
 
 // commandType de ciclo de vida → pendingAction que lo originó
 const ACTION_OF = {
@@ -157,6 +158,7 @@ const markExecuted = async (req, res, next) => {
     }
 
     await applyExecuted(session, claimed);
+    if (targetStatus(session, claimed.commandType) !== null) emitSessionStatus(session);
 
     res.json({ message: 'Comando ejecutado', command: claimed, session: summary(session) });
   } catch (err) {
@@ -207,6 +209,7 @@ const markFailed = async (req, res, next) => {
       session.pendingAction = null;
       await session.save();
     }
+    emitSessionStatus(session);
 
     res.json({ message: 'Comando marcado como fallido', command: claimed, session: summary(session) });
   } catch (err) {

@@ -3,6 +3,7 @@ const User = require('../models/User');
 const { assertTransition, InvalidTransitionError } = require('../utils/sessionState');
 const { loadOwnedSession } = require('../utils/ownership');
 const { closeSession } = require('../utils/sessionLifecycle');
+const { emitSessionStatus } = require('../realtime/io');
 
 // POST /api/sessions
 // therapist sale del JWT, no del body. environment sale de patient.phobia.
@@ -106,6 +107,7 @@ const updateSession = async (req, res, next) => {
 
     if (status !== undefined) {
       await closeSession(session, status); // valida y guarda todo
+      emitSessionStatus(session);
     } else {
       await session.save();
     }
