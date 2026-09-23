@@ -24,7 +24,9 @@ const sessionCommandSchema = new mongoose.Schema(
         'dressing_room_light',      // encendida / intermitente / apagada
         // Aracnofobia Niveles 1 y 2
         'spider_movement',          // activar/desactivar movimiento
-        'spider_count',             // cantidad de arañas (1–10)
+        'spider_count',             // cantidad de arañas (1–4)
+        //MRI
+        'mri_control',
         // General
         'session_pause',            // pausa de emergencia
         'session_resume'            // reanudar
