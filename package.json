@@ -10,7 +10,9 @@
     "migrate:session-status": "node scripts/migrateSessionStatus.js",
     "seed:environments": "node scripts/seedEnvironments.js",
     "seed:therapist": "node scripts/seedStaff.js --role=therapist",
-    "seed:admin": "node scripts/seedStaff.js --role=admin"
+    "seed:admin": "node scripts/seedStaff.js --role=admin",
+    "seed:scenarios": "node scripts/seedScenarios.js",
+    "seed:devices": "node scripts/seedDevices.js"
   },
   "keywords": [],
   "author": "",

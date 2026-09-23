@@ -20,11 +20,11 @@ const deviceSchema = new mongoose.Schema(
       trim: true,
       default: ''
     },
-    // Solo aplica a type: 'watch' — el Quest no está atado a un paciente fijo
+    // Solo lo usa el watch, y puede estar sin vincular: se vincula al iniciar
+    // una sesión (POST /sessions/:id/start). El Quest nunca lo usa.
     patient: {
       type: mongoose.Schema.Types.ObjectId,
       ref: 'User',
-      required: function() { return this.type === 'watch'; },
       default: null
     },
     apiKey: {

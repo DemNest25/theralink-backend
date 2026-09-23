@@ -1,0 +1,11 @@
+[
+  { "key": "nicto_hab",      "name": "Habitación",        "phobia": "nictofobia",    "order": 1, "mapName": "COMPLETAR", "mapNameHint": "Nictofobia_Habitacion" },
+  { "key": "nicto_pasillo",  "name": "Pasillo",           "phobia": "nictofobia",    "order": 2, "mapName": "COMPLETAR", "mapNameHint": "Nictofobia_Pasillo" },
+  { "key": "nicto_bosque",   "name": "Bosque",            "phobia": "nictofobia",    "order": 3, "mapName": "COMPLETAR", "mapNameHint": "Nictofobia_Bosque" },
+  { "key": "claus_vestidor", "name": "Vestidor",          "phobia": "claustrofobia", "order": 2, "mapName": "COMPLETAR", "mapNameHint": "Claustrofobia_Vestier" },
+  { "key": "claus_elevador", "name": "Elevador",          "phobia": "claustrofobia", "order": 1, "mapName": "COMPLETAR", "mapNameHint": "Claustrofobia_Elevador" },
+  { "key": "claus_mri",      "name": "Resonancia (MRI)",  "phobia": "claustrofobia", "order": 3, "mapName": "COMPLETAR", "mapNameHint": "Claustrofobia_MRI" },
+  { "key": "arac_sala1",     "name": "Sala Bote Cerrado", "phobia": "aracnofobia",   "order": 1, "mapName": "COMPLETAR", "mapNameHint": "Aracnofobia_Sala-CB" },
+  { "key": "arac_sotano",    "name": "Sótano",            "phobia": "aracnofobia",   "order": 3, "mapName": "COMPLETAR", "mapNameHint": "Aracnofobia_Sotano" },
+  { "key": "arac_sala2",     "name": "Sala Bote Abierto", "phobia": "aracnofobia",   "order": 2, "mapName": "COMPLETAR", "mapNameHint": "Aracnofobia_Sala-OB" }
+]

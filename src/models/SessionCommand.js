@@ -27,9 +27,11 @@ const sessionCommandSchema = new mongoose.Schema(
         'spider_count',             // cantidad de arañas (1–4)
         //MRI
         'mri_control',
-        // General
+        // Ciclo de vida (solo por los endpoints de control de sesión)
+        'load_scenario',            // cargar el mapa del escenario
         'session_pause',            // pausa de emergencia
-        'session_resume'            // reanudar
+        'session_resume',           // reanudar
+        'session_end'               // terminar y volver al Lobby
       ]
     },
     payload: {
@@ -38,11 +40,15 @@ const sessionCommandSchema = new mongoose.Schema(
     },
     status: {
       type: String,
-      enum: ['pending', 'executed', 'cancelled'],
+      enum: ['pending', 'executed', 'cancelled', 'failed'],
       default: 'pending'
     },
     executedAt: {
       type: Date,
+      default: null
+    },
+    failureReason: {
+      type: String,
       default: null
     }
   },
