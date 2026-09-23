@@ -3,7 +3,7 @@ const SessionCommand = require('../models/SessionCommand');
 
 // POST /api/sessions/:id/command
 // Terapeuta envía un comando desde el dashboard
-const sendCommand = async (req, res) => {
+const sendCommand = async (req, res, next) => {
   try {
     const { commandType, payload } = req.body;
 
@@ -16,13 +16,13 @@ const sendCommand = async (req, res) => {
 
     res.status(201).json({ message: 'Comando enviado', command });
   } catch (err) {
-    res.status(500).json({ message: 'Error del servidor', error: err.message });
+    next(err);
   }
 };
 
 // GET /api/sessions/:id/command/pending
 // UE5 consulta cada 3 segundos si hay comandos nuevos
-const getPendingCommands = async (req, res) => {
+const getPendingCommands = async (req, res, next) => {
   try {
     const commands = await SessionCommand.find({
       session: req.params.id,
@@ -31,13 +31,13 @@ const getPendingCommands = async (req, res) => {
 
     res.json(commands);
   } catch (err) {
-    res.status(500).json({ message: 'Error del servidor', error: err.message });
+    next(err);
   }
 };
 
 // PATCH /api/sessions/:id/command/:commandId/executed
 // UE5 confirma que ejecutó el comando
-const markExecuted = async (req, res) => {
+const markExecuted = async (req, res, next) => {
   try {
     const command = await SessionCommand.findByIdAndUpdate(
       req.params.commandId,
@@ -51,7 +51,7 @@ const markExecuted = async (req, res) => {
 
     res.json({ message: 'Comando marcado como ejecutado', command });
   } catch (err) {
-    res.status(500).json({ message: 'Error del servidor', error: err.message });
+    next(err);
   }
 };
 

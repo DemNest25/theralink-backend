@@ -6,7 +6,11 @@
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
     "dev": "nodemon src/app.js",
-    "start": "node src/app.js"
+    "start": "node src/app.js",
+    "migrate:session-status": "node scripts/migrateSessionStatus.js",
+    "seed:environments": "node scripts/seedEnvironments.js",
+    "seed:therapist": "node scripts/seedStaff.js --role=therapist",
+    "seed:admin": "node scripts/seedStaff.js --role=admin"
   },
   "keywords": [],
   "author": "",

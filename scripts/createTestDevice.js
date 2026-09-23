@@ -8,6 +8,7 @@ async function run() {
   await mongoose.connect(process.env.MONGO_URI);
   const device = await Device.create({
     deviceId: 'WATCH-TEST-001',
+    type: 'watch',
     patient: '69d188ed84e0c6054da49f01',
     apiKey: 'test-api-key-12345',
     active: true,

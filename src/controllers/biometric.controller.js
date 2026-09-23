@@ -3,7 +3,7 @@ const Session = require('../models/Session');
 const mongoose = require('mongoose');
 
 // POST /api/biometrics
-const createBiometric = async (req, res) => {
+const createBiometric = async (req, res, next) => {
   try {
     const {
       session, patient, heartRate, ibi, hrv,
@@ -19,24 +19,24 @@ const createBiometric = async (req, res) => {
 
     res.status(201).json({ message: 'Lectura biométrica registrada', biometric });
   } catch (err) {
-    res.status(500).json({ message: 'Error del servidor', error: err.message });
+    next(err);
   }
 };
 
 // GET /api/biometrics/session/:sessionId
-const getBiometricsBySession = async (req, res) => {
+const getBiometricsBySession = async (req, res, next) => {
   try {
     const biometrics = await Biometric.find({ session: req.params.sessionId })
       .sort({ timestamp: 1 }); // orden cronológico
 
     res.json(biometrics);
   } catch (err) {
-    res.status(500).json({ message: 'Error del servidor', error: err.message });
+    next(err);
   }
 };
 
 // GET /api/biometrics/session/:sessionId/summary
-const getBiometricSummary = async (req, res) => {
+const getBiometricSummary = async (req, res, next) => {
   try {
     const result = await Biometric.aggregate([
       { $match: { session: new mongoose.Types.ObjectId(req.params.sessionId) } },
@@ -71,12 +71,12 @@ const getBiometricSummary = async (req, res) => {
 
     res.json(summary);
   } catch (err) {
-    res.status(500).json({ message: 'Error del servidor', error: err.message });
+    next(err);
   }
 };
 
 // POST /api/biometrics/:sessionId — ingesta por lote desde el Watch (auth por API key de dispositivo)
-const ingestReadings = async (req, res) => {
+const ingestReadings = async (req, res, next) => {
   try {
     const { sessionId } = req.params;
     const { readings } = req.body;
@@ -101,7 +101,7 @@ const ingestReadings = async (req, res) => {
 
     res.status(201).json({ inserted: inserted.length });
   } catch (err) {
-    res.status(500).json({ message: 'Error del servidor', error: err.message });
+    next(err);
   }
 };
 

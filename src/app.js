@@ -16,10 +16,13 @@ mongoose.connect(process.env.MONGO_URI)
 // Rutas
 app.use('/api/auth', require('./routes/auth.routes'));
 app.use('/api/sessions',  require('./routes/session.routes'));
+app.use('/api/patients',  require('./routes/patient.routes'));
 app.use('/api/biometrics',require('./routes/biometric.routes'));
 app.use('/api/environments', require('./routes/environment.routes'));
 app.use('/api/users', require('./routes/user.routes'));
 app.use('/api/sessions/:id/command', require('./routes/command.routes'));
+
+app.use(require('./middleware/errorHandler'));
 
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => console.log(`✓ Servidor en puerto ${PORT}`));

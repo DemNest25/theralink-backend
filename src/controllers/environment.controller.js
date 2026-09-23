@@ -1,7 +1,7 @@
 const Environment = require('../models/Environment');
 
 // POST /api/environments
-const createEnvironment = async (req, res) => {
+const createEnvironment = async (req, res, next) => {
   try {
     const { name, displayName, description, difficultyLevels } = req.body;
 
@@ -19,22 +19,22 @@ const createEnvironment = async (req, res) => {
 
     res.status(201).json({ message: 'Ambiente creado', environment });
   } catch (err) {
-    res.status(500).json({ message: 'Error del servidor', error: err.message });
+    next(err);
   }
 };
 
 // GET /api/environments
-const getEnvironments = async (req, res) => {
+const getEnvironments = async (req, res, next) => {
   try {
     const environments = await Environment.find({ isActive: true });
     res.json(environments);
   } catch (err) {
-    res.status(500).json({ message: 'Error del servidor', error: err.message });
+    next(err);
   }
 };
 
 // PATCH /api/environments/:id
-const updateEnvironment = async (req, res) => {
+const updateEnvironment = async (req, res, next) => {
   try {
     const allowed = ['displayName', 'description', 'difficultyLevels', 'isActive'];
     const updates = {};
@@ -55,7 +55,7 @@ const updateEnvironment = async (req, res) => {
 
     res.json({ message: 'Ambiente actualizado', environment });
   } catch (err) {
-    res.status(500).json({ message: 'Error del servidor', error: err.message });
+    next(err);
   }
 };
 

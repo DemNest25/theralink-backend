@@ -1,7 +1,7 @@
 const User = require('../models/User');
 
 // PATCH /api/users/:id/threshold
-const updateThreshold = async (req, res) => {
+const updateThreshold = async (req, res, next) => {
   try {
     const { hr, hrv } = req.body;
 
@@ -17,12 +17,12 @@ const updateThreshold = async (req, res) => {
 
     res.json({ message: 'Umbral actualizado', anxietyThreshold: user.anxietyThreshold });
   } catch (err) {
-    res.status(500).json({ message: 'Error del servidor', error: err.message });
+    next(err);
   }
 };
 
 // PATCH /api/users/:id/safeplace
-const updateSafePlace = async (req, res) => {
+const updateSafePlace = async (req, res, next) => {
   try {
     const { name, description } = req.body;
 
@@ -38,7 +38,7 @@ const updateSafePlace = async (req, res) => {
 
     res.json({ message: 'Lugar seguro actualizado', safePlace: user.safePlace });
   } catch (err) {
-    res.status(500).json({ message: 'Error del servidor', error: err.message });
+    next(err);
   }
 };
 

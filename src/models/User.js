@@ -30,6 +30,13 @@ const userSchema = new mongoose.Schema(
       ref: 'User',
       default: null
     },
+    // Solo aplica si role === 'patient' — referencia al Environment (fobia) del paciente
+    phobia: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'Environment',
+      required: function() { return this.role === 'patient'; },
+      default: null
+    },
     anxietyThreshold: {
       hr:  { type: Number, default: 100 }, // bpm
       hrv: { type: Number, default: 40 },  // ms

@@ -1,17 +1,31 @@
 // src/models/Device.js
 const mongoose = require('mongoose');
 
+const ONLINE_THRESHOLD_MS = 10 * 1000;
+
 const deviceSchema = new mongoose.Schema(
   {
     deviceId: {
       type: String,
       required: true,
-      unique: true // serial del Watch
+      unique: true // serial del Watch o del Quest (ej. "quest-01")
     },
+    type: {
+      type: String,
+      enum: ['quest', 'watch'],
+      required: true
+    },
+    name: {
+      type: String,
+      trim: true,
+      default: ''
+    },
+    // Solo aplica a type: 'watch' — el Quest no está atado a un paciente fijo
     patient: {
       type: mongoose.Schema.Types.ObjectId,
       ref: 'User',
-      required: true
+      required: function() { return this.type === 'watch'; },
+      default: null
     },
     apiKey: {
       type: String,
@@ -21,16 +35,26 @@ const deviceSchema = new mongoose.Schema(
     active: {
       type: Boolean,
       default: true
+    },
+    lastSeen: {
+      type: Date,
+      default: null
     }
   },
   {
-    timestamps: true
+    timestamps: true,
+    toJSON: { virtuals: true },
+    toObject: { virtuals: true }
   }
 );
 
-// El Device solo puede vincularse a un User con role: 'patient'
+deviceSchema.virtual('online').get(function() {
+  return !!this.lastSeen && (Date.now() - this.lastSeen.getTime()) < ONLINE_THRESHOLD_MS;
+});
+
+// Si el Device está vinculado a un patient, debe ser un User con role: 'patient'
 deviceSchema.pre('save', async function() {
-  if (!this.isModified('patient')) return;
+  if (!this.isModified('patient') || !this.patient) return;
 
   const User = mongoose.model('User');
   const patient = await User.findById(this.patient);

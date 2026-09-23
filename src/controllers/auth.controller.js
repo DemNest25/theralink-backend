@@ -11,29 +11,17 @@ const generateToken = (user) => {
 };
 
 // POST /api/auth/register
-const register = async (req, res) => {
-  try {
-    const { name, email, password, role } = req.body;
-
-    const existingUser = await User.findOne({ email });
-    if (existingUser) {
-      return res.status(400).json({ message: 'El email ya está registrado' });
-    }
-
-    const user = await User.create({ name, email, password, role });
-
-    res.status(201).json({
-      message: 'Usuario creado exitosamente',
-      token: generateToken(user),
-      user: { id: user._id, name: user.name, role: user.role }
-    });
-  } catch (err) {
-    res.status(500).json({ message: 'Error del servidor', error: err.message });
-  }
+// Deshabilitado para todos los roles: therapist/admin se crean por seed
+// (npm run seed:therapist / seed:admin), patient por POST /api/patients
+// (terapeuta autenticado). Nunca por auto-registro.
+const register = (req, res) => {
+  res.status(410).json({
+    message: "Registro deshabilitado. Las cuentas de therapist/admin se crean por seed y las de patient por POST /api/patients."
+  });
 };
 
 // POST /api/auth/login
-const login = async (req, res) => {
+const login = async (req, res, next) => {
   try {
     const { email, password } = req.body;
 
@@ -52,7 +40,7 @@ const login = async (req, res) => {
       user: { id: user._id, name: user.name, role: user.role }
     });
   } catch (err) {
-    res.status(500).json({ message: 'Error del servidor', error: err.message });
+    next(err);
   }
 };
 

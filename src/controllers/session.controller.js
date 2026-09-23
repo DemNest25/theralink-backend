@@ -1,25 +1,45 @@
 const Session = require('../models/Session');
+const User = require('../models/User');
+const { assertTransition, InvalidTransitionError } = require('../utils/sessionState');
 
 // POST /api/sessions
-const createSession = async (req, res) => {
+// therapist sale del JWT, no del body. environment sale de patient.phobia.
+const createSession = async (req, res, next) => {
   try {
-    const { patient, therapist, environment, startTime } = req.body;
+    const { patient, environment } = req.body;
 
+    const patientUser = await User.findById(patient);
+    if (!patientUser || patientUser.role !== 'patient') {
+      return res.status(404).json({ message: 'Paciente no encontrado' });
+    }
+
+    if (patientUser.assignedTherapist && patientUser.assignedTherapist.toString() !== req.user.id) {
+      return res.status(403).json({ message: 'Este paciente no está asignado a tu usuario' });
+    }
+
+    if (!patientUser.phobia) {
+      return res.status(400).json({ message: 'El paciente no tiene una fobia (Environment) asignada' });
+    }
+
+    if (environment && environment !== patientUser.phobia.toString()) {
+      return res.status(400).json({ message: 'El environment no coincide con la fobia del paciente' });
+    }
+
+    // startTime queda null (default del schema) hasta que la sesión entre a en_curso
     const session = await Session.create({
       patient,
-      therapist,
-      environment,
-      startTime
+      therapist: req.user.id,
+      environment: patientUser.phobia
     });
 
     res.status(201).json({ message: 'Sesión creada', session });
   } catch (err) {
-    res.status(500).json({ message: 'Error del servidor', error: err.message });
+    next(err);
   }
 };
 
 // GET /api/sessions
-const getSessions = async (req, res) => {
+const getSessions = async (req, res, next) => {
   try {
     const { patient, therapist } = req.query;
     const filter = {};
@@ -35,12 +55,12 @@ const getSessions = async (req, res) => {
 
     res.json(sessions);
   } catch (err) {
-    res.status(500).json({ message: 'Error del servidor', error: err.message });
+    next(err);
   }
 };
 
 // GET /api/sessions/:id
-const getSessionById = async (req, res) => {
+const getSessionById = async (req, res, next) => {
   try {
     const session = await Session.findById(req.params.id)
       .populate('patient',   'name email')
@@ -53,12 +73,12 @@ const getSessionById = async (req, res) => {
 
     res.json(session);
   } catch (err) {
-    res.status(500).json({ message: 'Error del servidor', error: err.message });
+    next(err);
   }
 };
 
 // PATCH /api/sessions/:id
-const updateSession = async (req, res) => {
+const updateSession = async (req, res, next) => {
   try {
     const allowed = ['status', 'anxietyLevel', 'therapistNotes', 'endTime'];
     const updates = {};
@@ -67,14 +87,44 @@ const updateSession = async (req, res) => {
       if (req.body[field] !== undefined) updates[field] = req.body[field];
     });
 
-    // Si se está cerrando la sesión, calcular duración automáticamente
-    if (updates.status === 'completed' || updates.status === 'interrupted') {
-      const session = await Session.findById(req.params.id);
-      if (session) {
+    if (updates.status !== undefined) {
+      const current = await Session.findById(req.params.id);
+      if (!current) {
+        return res.status(404).json({ message: 'Sesión no encontrada' });
+      }
+
+      try {
+        assertTransition(current.status, updates.status);
+      } catch (err) {
+        if (err instanceof InvalidTransitionError) {
+          return res.status(err.status).json({ message: err.message });
+        }
+        throw err;
+      }
+
+      // Un paciente no puede tener más de una sesión cargando/en_curso/pausada a la vez
+      if (updates.status === 'cargando') {
+        const conflicting = await Session.findOne({
+          _id: { $ne: current._id },
+          patient: current.patient,
+          status: { $in: ['cargando', 'en_curso', 'pausada'] }
+        });
+
+        if (conflicting) {
+          return res.status(409).json({ message: 'El paciente ya tiene otra sesión cargando, en curso o en pausa' });
+        }
+      }
+
+      // Primera vez que entra a en_curso (cargando → en_curso); al reanudar
+      // desde pausada, startTime ya está seteado y no se toca.
+      if (updates.status === 'en_curso' && !current.startTime) {
+        updates.startTime = new Date();
+      }
+
+      // Al cerrar la sesión, calcular duración descontando los intervalos de pauses
+      if (updates.status === 'finalizada' || updates.status === 'cancelada') {
         updates.endTime = updates.endTime || new Date();
-        updates.durationMinutes = Math.round(
-          (new Date(updates.endTime) - session.startTime) / 60000
-        );
+        updates.durationMinutes = current.calculateDurationMinutes(updates.endTime);
       }
     }
 
@@ -90,12 +140,12 @@ const updateSession = async (req, res) => {
 
     res.json({ message: 'Sesión actualizada', session });
   } catch (err) {
-    res.status(500).json({ message: 'Error del servidor', error: err.message });
+    next(err);
   }
 };
 
 // DELETE /api/sessions/:id
-const deleteSession = async (req, res) => {
+const deleteSession = async (req, res, next) => {
   try {
     const session = await Session.findByIdAndDelete(req.params.id);
 
@@ -105,16 +155,24 @@ const deleteSession = async (req, res) => {
 
     res.json({ message: 'Sesión eliminada' });
   } catch (err) {
-    res.status(500).json({ message: 'Error del servidor', error: err.message });
+    next(err);
   }
 };
 
-const getActiveSessionForDevice = async (req, res) => {
+const getActiveSessionForDevice = async (req, res, next) => {
   try {
+    // Device sin patient (ej. un Quest, o un watch nunca vinculado): no hay
+    // nada que buscar, no es un error — el reloj lo trata como "no hay sesión".
+    if (!req.device.patient) {
+      return res.status(200).json({ message: 'No hay sesión activa para este paciente' });
+    }
+
     const session = await Session.findOne({
       patient: req.device.patient,
-      status: 'active'
-    }).sort({ startTime: -1 });
+      status: { $in: ['en_curso', 'pausada'] }
+    })
+      .sort({ startTime: -1 })
+      .populate('environment', 'name displayName');
 
     if (!session) {
       return res.status(404).json({ message: 'No hay sesión activa para este paciente' });
@@ -127,7 +185,7 @@ const getActiveSessionForDevice = async (req, res) => {
       startTime: session.startTime
     });
   } catch (err) {
-    res.status(500).json({ message: 'Error del servidor', error: err.message });
+    next(err);
   }
 };
 
