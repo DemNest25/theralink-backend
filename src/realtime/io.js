@@ -18,10 +18,13 @@ const sessionRoom = (sessionId) => `session:${sessionId}`;
 function init(server) {
   io = new Server(server, { cors: { origin: '*' } }); // igual que cors() de Express
 
-  // Handshake: JWT en auth.token, solo therapist
+  // Handshake: JWT en auth.token (navegador) o en el header Authorization
+  // "Bearer <token>" (Postman); misma validación y solo therapist
   io.use((socket, next) => {
     try {
-      const token = socket.handshake.auth?.token;
+      const authHeader = socket.handshake.headers?.authorization;
+      const headerToken = authHeader?.startsWith('Bearer ') ? authHeader.slice(7) : null;
+      const token = socket.handshake.auth?.token || headerToken;
       if (!token) return next(new Error('Token requerido'));
 
       const decoded = jwt.verify(token, process.env.JWT_SECRET);
