@@ -12,7 +12,8 @@
     "seed:therapist": "node scripts/seedStaff.js --role=therapist",
     "seed:admin": "node scripts/seedStaff.js --role=admin",
     "seed:scenarios": "node scripts/seedScenarios.js",
-    "seed:devices": "node scripts/seedDevices.js"
+    "seed:devices": "node scripts/seedDevices.js",
+    "simulate": "node scripts/simulate-devices.js"
   },
   "keywords": [],
   "author": "",

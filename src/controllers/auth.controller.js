@@ -23,7 +23,8 @@ const register = (req, res) => {
 // POST /api/auth/login
 const login = async (req, res, next) => {
   try {
-    const { email, password } = req.body;
+    const { password } = req.body;
+    const email = String(req.body.email || '').trim().toLowerCase();
 
     const user = await User.findOne({ email });
     if (!user || user.isActive === false) {

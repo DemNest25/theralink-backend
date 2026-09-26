@@ -46,6 +46,7 @@ autenticado (JWT `Authorization: Bearer <token>`). **Device** = header
 | POST | /sessions/:id/resume | JWT | T | Solicita reanudar (`session_resume`); requiere `pausada` |
 | POST | /sessions/:id/end | JWT | T | Solicita terminar (`session_end`); cancela comandos pendientes |
 | POST | /sessions/:id/command | JWT | T | Envía un comando de escenario (sesión `en_curso`; no admite comandos de ciclo de vida) |
+| GET | /sessions/:id/command | JWT | T | Historial de comandos de una sesión propia, por `createdAt` ascendente: `[{ _id, commandType, payload, status, failureReason, createdAt, executedAt }]` |
 
 Los endpoints `start/pause/resume/end` solo piden la acción (`pendingAction`); el
 estado final cambia cuando el visor confirma el comando.
@@ -87,9 +88,31 @@ Conexión al mismo servidor HTTP con `auth: { token: <JWT> }` (solo `therapist`)
 | `session:status` | servidor → room `session:<id>` | `{ sessionId, status, pendingAction, scenario, startTime, endTime, pauses }` |
 | `biometric:new` | servidor → room `session:<id>` | `{ sessionId, readings: [{ timestamp, heartRate, hrv, eda, skinTemperature }] }` |
 | `device:status` | servidor → todos los terapeutas | `{ deviceId, type, online }` al cambiar online/offline (chequeo cada 5 s) |
+| `command:update` | servidor → room `session:<id>` | `{ sessionId, commandId, commandType, payload, status, failureReason, createdAt, executedAt }` al crear un comando de escenario (`pending`), al confirmarlo o fallar el visor (`executed` / `failed`) y al cancelarse (`cancelled`) |
 
 ## Máquina de estados de la sesión
 
 `programada → cargando → en_curso ⇄ pausada → finalizada`; `programada | cargando →
 cancelada`. Una transición inválida responde `409`. Un paciente (y un visor) no puede
 tener más de una sesión en `cargando`, `en_curso` o `pausada` a la vez.
+
+## Simulador (solo desarrollo)
+
+`scripts/simulate-devices.js` imita al visor y/o al reloj para probar la web sin
+hardware. No lo corras a la vez que el Quest o el reloj reales con la misma `apiKey`.
+
+```bash
+SIM_QUEST_KEY=<apiKey visor> SIM_WATCH_KEY=<apiKey reloj> npm run simulate
+npm run simulate -- --quest-key=<apiKey> --delay=800 --fail=spider_count,mri_control
+```
+
+- **Visor** (`--quest-key` / `SIM_QUEST_KEY`): cada 2 s consulta `GET /devices/me/commands`
+  (lo mantiene online), espera `--delay` ms (default 1500) y confirma cada comando con
+  `executed`, o `failed` si su `commandType` está en `--fail`.
+- **Reloj** (`--watch-key` / `SIM_WATCH_KEY`): cada 2 s consulta `GET /sessions/active` y, con la
+  sesión `en_curso`, envía un lote de 2 lecturas (FC 70–105 en caminata aleatoria, HRV 30–60,
+  EDA 1–4, temperatura 32–35). En `pausada` no envía. La tecla `s` fuerza un pico de FC
+  (125–140) durante 20 s; `q` o Ctrl+C sale.
+- `--api=<url>` cambia la base (default `http://localhost:3000/api`).
+- Con `npm run simulate -- --quest-key=...` npm imprime los argumentos; si no quieres que la
+  `apiKey` quede en la terminal, usa las variables de entorno.

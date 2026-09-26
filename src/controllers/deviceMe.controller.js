@@ -5,7 +5,7 @@ const Session = require('../models/Session');
 const SessionCommand = require('../models/SessionCommand');
 const { assertTransition, InvalidTransitionError } = require('../utils/sessionState');
 const { ACTIVE_STATUSES, closeSession } = require('../utils/sessionLifecycle');
-const { emitSessionStatus } = require('../realtime/io');
+const { emitSessionStatus, emitCommandUpdate } = require('../realtime/io');
 
 // commandType de ciclo de vida → pendingAction que lo originó
 const ACTION_OF = {
@@ -156,6 +156,7 @@ const markExecuted = async (req, res, next) => {
       }
       return res.status(409).json({ message: `El comando está '${current.status}'` });
     }
+    emitCommandUpdate(claimed);
 
     await applyExecuted(session, claimed);
     if (targetStatus(session, claimed.commandType) !== null) emitSessionStatus(session);
@@ -201,6 +202,7 @@ const markFailed = async (req, res, next) => {
       const current = await SessionCommand.findById(command._id);
       return res.status(409).json({ message: `El comando está '${current.status}'` });
     }
+    emitCommandUpdate(claimed);
 
     if (claimed.commandType === 'load_scenario') {
       await closeSession(session, 'cancelada', claimed._id);

@@ -1,14 +1,24 @@
 // src/utils/sessionLifecycle.js
 const Session = require('../models/Session');
 const SessionCommand = require('../models/SessionCommand');
+const { emitCommandUpdate } = require('../realtime/io');
 
 const ACTIVE_STATUSES = ['cargando', 'en_curso', 'pausada'];
 
-// Cancela los comandos pendientes de una sesión (opcionalmente salvo uno).
+// Cancela los comandos pendientes de una sesión (opcionalmente salvo uno) y
+// emite command:update por cada uno que efectivamente se canceló.
 async function cancelPendingCommands(sessionId, exceptCommandId = null) {
   const filter = { session: sessionId, status: 'pending' };
   if (exceptCommandId) filter._id = { $ne: exceptCommandId };
-  return SessionCommand.updateMany(filter, { $set: { status: 'cancelled' } });
+
+  const ids = (await SessionCommand.find(filter).select('_id')).map(c => c._id);
+  if (ids.length === 0) return;
+
+  // status: 'pending' otra vez: si el visor reclamó uno entre medias, no se toca
+  await SessionCommand.updateMany({ _id: { $in: ids }, status: 'pending' }, { $set: { status: 'cancelled' } });
+
+  const cancelled = await SessionCommand.find({ _id: { $in: ids }, status: 'cancelled' });
+  cancelled.forEach(emitCommandUpdate);
 }
 
 // Cierre común (F4): finalizada o cancelada. Fija endTime, cierra la pausa

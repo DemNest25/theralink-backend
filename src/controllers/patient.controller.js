@@ -5,7 +5,8 @@ const Environment = require('../models/Environment');
 // POST /api/patients — solo therapist (ver patient.routes.js). assignedTherapist = req.user.id
 const createPatient = async (req, res, next) => {
   try {
-    const { name, email, password, phobia } = req.body;
+    const { name, password, phobia } = req.body;
+    const email = String(req.body.email || '').trim().toLowerCase();
 
     if (!phobia || !mongoose.Types.ObjectId.isValid(phobia)) {
       return res.status(400).json({ message: 'phobia es requerido y debe ser un ObjectId válido de Environment' });

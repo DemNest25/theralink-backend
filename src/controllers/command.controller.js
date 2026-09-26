@@ -1,6 +1,7 @@
 // src/controllers/command.controller.js
 const SessionCommand = require('../models/SessionCommand');
 const { loadOwnedSession } = require('../utils/ownership');
+const { emitCommandUpdate } = require('../realtime/io');
 
 const LIFECYCLE_COMMANDS = ['load_scenario', 'session_pause', 'session_resume', 'session_end'];
 
@@ -28,7 +29,24 @@ const sendCommand = async (req, res, next) => {
       payload:     payload || {}
     });
 
+    emitCommandUpdate(command); // otras pestañas del terapeuta lo ven pendiente
     res.status(201).json({ message: 'Comando enviado', command });
+  } catch (err) {
+    next(err);
+  }
+};
+
+// GET /api/sessions/:id/command
+// Historial de comandos de una sesión propia, en orden de creación
+const getCommandHistory = async (req, res, next) => {
+  try {
+    const session = await loadOwnedSession(req.params.id, req.user.id);
+
+    const commands = await SessionCommand.find({ session: session._id })
+      .sort({ createdAt: 1 })
+      .select('commandType payload status failureReason createdAt executedAt');
+
+    res.json(commands);
   } catch (err) {
     next(err);
   }
@@ -69,4 +87,4 @@ const markExecuted = async (req, res, next) => {
   }
 };
 
-module.exports = { sendCommand, getPendingCommands, markExecuted };
+module.exports = { sendCommand, getCommandHistory, getPendingCommands, markExecuted };

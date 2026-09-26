@@ -126,4 +126,24 @@ function emitBiometricBatch(sessionId, docs) {
   }
 }
 
-module.exports = { init, getIO, emitSessionStatus, emitBiometricBatch };
+// command:update → room de la sesión, cada vez que un comando cambia de estado
+function emitCommandUpdate(command) {
+  if (!io || !command) return;
+  try {
+    const sessionId = command.session?._id ?? command.session;
+    io.to(sessionRoom(sessionId)).emit('command:update', {
+      sessionId,
+      commandId: command._id,
+      commandType: command.commandType,
+      payload: command.payload,
+      status: command.status,
+      failureReason: command.failureReason,
+      createdAt: command.createdAt,
+      executedAt: command.executedAt
+    });
+  } catch (err) {
+    console.error('Error emitiendo command:update:', err.message);
+  }
+}
+
+module.exports = { init, getIO, emitSessionStatus, emitBiometricBatch, emitCommandUpdate };
