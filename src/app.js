@@ -14,6 +14,14 @@ mongoose.connect(process.env.MONGO_URI)
   .then(() => console.log('✓ MongoDB conectado'))
   .catch(err => console.error('✗ Error MongoDB:', err));
 
+app.use((req, res, next) => {
+  const t0 = Date.now();
+  res.on('finish', () => {
+    console.log(`${new Date().toISOString()} ${req.method} ${req.originalUrl} → ${res.statusCode} (${Date.now() - t0} ms)`);
+  });
+  next();
+});
+
 // Rutas
 app.use('/api/auth', require('./routes/auth.routes'));
 app.use('/api/sessions',  require('./routes/session.routes'));

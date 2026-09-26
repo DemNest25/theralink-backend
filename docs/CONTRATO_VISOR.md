@@ -182,3 +182,24 @@ Respuesta `200` con la misma forma que 3.1 y `command.status: "failed"`.
 `PATCH /api/sessions/:id/command/:commandId/executed` siguen funcionando sin cambios
 para el UE5 actual, pero **no aplican transiciones de estado**. UE5 debe migrar a las
 rutas de este documento; después se eliminarán.
+
+## 7. Payloads de los comandos de escenario
+
+| commandType | payload | Valores válidos | Escenario |
+|---|---|---|---|
+| `elevator_wall_material` | `{ "wall": "...", "material": "..." }` | wall: `Pared_norte` / `Pared_sur` / `Pared_este` · material: `glass` / `metal` | Ascensor |
+| `dressing_room_light` | `{ "state": "..." }` | `on` / `flicker` / `off` | Vestidor |
+| `spider_movement` | `{ "action": "start" \| "stop" }` | `start` activa; cualquier otro valor detiene | Salas de arañas |
+| `spider_count` | `{ "count": 1-4 }` | entero de 1 a 4 | Salas de arañas |
+| `mri_control` | `{ "action": "start" \| "stop" }` | `start` inicia; cualquier otro valor cancela | Resonancia |
+
+Si el comando llega a un escenario sin el actor correspondiente, UE responde
+`failed` con el motivo (p. ej. "No hay BP_CamillaMRI en el nivel").
+
+Ejemplos:
+
+    { "commandType": "elevator_wall_material", "payload": { "wall": "Pared_norte", "material": "glass" } }
+    { "commandType": "dressing_room_light",    "payload": { "state": "flicker" } }
+    { "commandType": "spider_movement",        "payload": { "action": "start" } }
+    { "commandType": "spider_count",           "payload": { "count": 3 } }
+    { "commandType": "mri_control",            "payload": { "action": "start" } }
