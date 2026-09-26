@@ -5,15 +5,18 @@
 // datos por la misma sesión.
 //
 // Uso:
+//   npm run simulate                     (claves desde SIM_QUEST_KEY / SIM_WATCH_KEY del .env)
 //   npm run simulate -- --quest-key=<apiKey> --watch-key=<apiKey>
 //   npm run simulate -- --quest-key=<apiKey> --delay=800 --fail=spider_count,mri_control
 // Opciones:
 //   --api=<url>          Base de la API (default http://localhost:3000/api)
-//   --quest-key=<key>    apiKey del visor (o env SIM_QUEST_KEY)
-//   --watch-key=<key>    apiKey del reloj (o env SIM_WATCH_KEY)
+//   --quest-key=<key>    apiKey del visor (si no, SIM_QUEST_KEY del .env)
+//   --watch-key=<key>    apiKey del reloj (si no, SIM_WATCH_KEY del .env)
 //   --delay=<ms>         Espera antes de confirmar cada comando (default 1500)
 //   --fail=<t1,t2>       commandType que el visor reporta como fallidos
 // Teclas: "s" fuerza un pico de FC (125–140 durante 20 s), "q" o Ctrl+C sale.
+
+require('dotenv').config({ path: require('path').join(__dirname, '..', '.env'), quiet: true });
 
 const POLL_MS = 2000;
 const SPIKE_MS = 20000;
@@ -135,7 +138,7 @@ function loop(fn) {
 }
 
 if (!QUEST_KEY && !WATCH_KEY) {
-  console.error('Falta --quest-key y/o --watch-key (o SIM_QUEST_KEY / SIM_WATCH_KEY).');
+  console.error('Falta SIM_QUEST_KEY y/o SIM_WATCH_KEY en el .env (o --quest-key / --watch-key).');
   process.exit(1);
 }
 

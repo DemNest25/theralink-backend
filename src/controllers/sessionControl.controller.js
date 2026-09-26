@@ -7,7 +7,7 @@ const SessionCommand = require('../models/SessionCommand');
 const Scenario = require('../models/Scenario');
 const Device = require('../models/Device');
 const { loadOwnedSession } = require('../utils/ownership');
-const { emitSessionStatus } = require('../realtime/io');
+const { emitSessionStatus, emitCommandUpdate } = require('../realtime/io');
 const {
   ACTIVE_STATUSES,
   cancelPendingCommands,
@@ -21,8 +21,12 @@ const conflict = (res, message) => res.status(409).json({ message });
 const claimSession = (sessionId, guard, update) =>
   Session.findOneAndUpdate({ _id: sessionId, ...guard }, { $set: update }, { returnDocument: 'after' });
 
-const createCommand = (session, userId, commandType, payload = {}) =>
-  SessionCommand.create({ session: session._id, issuedBy: userId, commandType, payload });
+// Crea el comando de ciclo de vida y lo emite como pending (command:update)
+async function createCommand(session, userId, commandType, payload = {}) {
+  const command = await SessionCommand.create({ session: session._id, issuedBy: userId, commandType, payload });
+  emitCommandUpdate(command);
+  return command;
+}
 
 // POST /api/sessions/:id/start  { scenarioId, deviceId, watchDeviceId? }
 const startSession = async (req, res, next) => {

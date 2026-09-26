@@ -101,18 +101,24 @@ tener más de una sesión en `cargando`, `en_curso` o `pausada` a la vez.
 `scripts/simulate-devices.js` imita al visor y/o al reloj para probar la web sin
 hardware. No lo corras a la vez que el Quest o el reloj reales con la misma `apiKey`.
 
+Pon las claves en el `.env` (ver `.env.example`) y corre:
+
 ```bash
-SIM_QUEST_KEY=<apiKey visor> SIM_WATCH_KEY=<apiKey reloj> npm run simulate
-npm run simulate -- --quest-key=<apiKey> --delay=800 --fail=spider_count,mri_control
+npm run simulate
 ```
 
-- **Visor** (`--quest-key` / `SIM_QUEST_KEY`): cada 2 s consulta `GET /devices/me/commands`
+```bash
+npm run simulate -- --delay=800 --fail=spider_count,mri_control
+```
+
+- **Visor** (`SIM_QUEST_KEY` o `--quest-key`): cada 2 s consulta `GET /devices/me/commands`
   (lo mantiene online), espera `--delay` ms (default 1500) y confirma cada comando con
   `executed`, o `failed` si su `commandType` está en `--fail`.
-- **Reloj** (`--watch-key` / `SIM_WATCH_KEY`): cada 2 s consulta `GET /sessions/active` y, con la
+- **Reloj** (`SIM_WATCH_KEY` o `--watch-key`): cada 2 s consulta `GET /sessions/active` y, con la
   sesión `en_curso`, envía un lote de 2 lecturas (FC 70–105 en caminata aleatoria, HRV 30–60,
   EDA 1–4, temperatura 32–35). En `pausada` no envía. La tecla `s` fuerza un pico de FC
   (125–140) durante 20 s; `q` o Ctrl+C sale.
 - `--api=<url>` cambia la base (default `http://localhost:3000/api`).
-- Con `npm run simulate -- --quest-key=...` npm imprime los argumentos; si no quieres que la
-  `apiKey` quede en la terminal, usa las variables de entorno.
+- `--quest-key=<apiKey>` / `--watch-key=<apiKey>` tienen prioridad sobre `SIM_QUEST_KEY` /
+  `SIM_WATCH_KEY` del `.env`. Se recomienda el `.env`: npm imprime los argumentos y la `apiKey`
+  quedaría en la terminal.
