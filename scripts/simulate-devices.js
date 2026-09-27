@@ -8,12 +8,14 @@
 //   npm run simulate                     (claves desde SIM_QUEST_KEY / SIM_WATCH_KEY del .env)
 //   npm run simulate -- --quest-key=<apiKey> --watch-key=<apiKey>
 //   npm run simulate -- --quest-key=<apiKey> --delay=800 --fail=spider_count,mri_control
+//   npm run simulate:watch               (solo reloj: úsalo con el Quest real encendido)
 // Opciones:
 //   --api=<url>          Base de la API (default http://localhost:3000/api)
 //   --quest-key=<key>    apiKey del visor (si no, SIM_QUEST_KEY del .env)
 //   --watch-key=<key>    apiKey del reloj (si no, SIM_WATCH_KEY del .env)
 //   --delay=<ms>         Espera antes de confirmar cada comando (default 1500)
 //   --fail=<t1,t2>       commandType que el visor reporta como fallidos
+//   --only=watch|quest   Corre solo el reloj o solo el visor (sin flag: ambos)
 // Teclas: "s" fuerza un pico de FC (125–140 durante 20 s), "q" o Ctrl+C sale.
 
 require('dotenv').config({ path: require('path').join(__dirname, '..', '.env'), quiet: true });
@@ -31,8 +33,15 @@ const args = Object.fromEntries(
 );
 
 const API = (args.api || 'http://localhost:3000/api').replace(/\/$/, '');
-const QUEST_KEY = args['quest-key'] || process.env.SIM_QUEST_KEY;
-const WATCH_KEY = args['watch-key'] || process.env.SIM_WATCH_KEY;
+const ONLY = args.only;
+if (ONLY !== undefined && !['watch', 'quest'].includes(ONLY)) {
+  console.error(`--only debe ser 'watch' o 'quest' (recibido: '${ONLY}').`);
+  process.exit(1);
+}
+
+// --only ignora la clave del otro dispositivo aunque esté en el .env
+const QUEST_KEY = ONLY === 'watch' ? null : args['quest-key'] || process.env.SIM_QUEST_KEY;
+const WATCH_KEY = ONLY === 'quest' ? null : args['watch-key'] || process.env.SIM_WATCH_KEY;
 const DELAY = Number(args.delay ?? 1500);
 const FAIL = new Set((args.fail || '').split(',').map(s => s.trim()).filter(Boolean));
 
@@ -137,12 +146,22 @@ function loop(fn) {
   run();
 }
 
+if (ONLY === 'watch' && !WATCH_KEY) {
+  console.error('--only=watch requiere SIM_WATCH_KEY en el .env (o --watch-key).');
+  process.exit(1);
+}
+if (ONLY === 'quest' && !QUEST_KEY) {
+  console.error('--only=quest requiere SIM_QUEST_KEY en el .env (o --quest-key).');
+  process.exit(1);
+}
 if (!QUEST_KEY && !WATCH_KEY) {
   console.error('Falta SIM_QUEST_KEY y/o SIM_WATCH_KEY en el .env (o --quest-key / --watch-key).');
   process.exit(1);
 }
 
+const MODE = QUEST_KEY && WATCH_KEY ? 'visor + reloj' : QUEST_KEY ? 'solo visor' : 'solo reloj';
 console.log(`Simulador contra ${API}  (solo desarrollo)`);
+console.log(`Modo: ${MODE}`);
 if (QUEST_KEY) {
   console.log(`  visor: delay ${DELAY} ms${FAIL.size ? `, falla: ${[...FAIL].join(', ')}` : ''}`);
   loop(questTick);

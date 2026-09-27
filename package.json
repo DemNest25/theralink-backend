@@ -13,7 +13,8 @@
     "seed:admin": "node scripts/seedStaff.js --role=admin",
     "seed:scenarios": "node scripts/seedScenarios.js",
     "seed:devices": "node scripts/seedDevices.js",
-    "simulate": "node scripts/simulate-devices.js"
+    "simulate": "node scripts/simulate-devices.js",
+    "simulate:watch": "node scripts/simulate-devices.js --only=watch"
   },
   "keywords": [],
   "author": "",

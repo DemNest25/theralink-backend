@@ -111,6 +111,13 @@ npm run simulate
 npm run simulate -- --delay=800 --fail=spider_count,mri_control
 ```
 
+Con el **Quest real encendido** usa el modo solo reloj, para que el simulador no confirme
+los comandos del visor ni compita con él (ignora `SIM_QUEST_KEY` aunque esté en el `.env`):
+
+```bash
+npm run simulate:watch
+```
+
 - **Visor** (`SIM_QUEST_KEY` o `--quest-key`): cada 2 s consulta `GET /devices/me/commands`
   (lo mantiene online), espera `--delay` ms (default 1500) y confirma cada comando con
   `executed`, o `failed` si su `commandType` está en `--fail`.
@@ -118,6 +125,9 @@ npm run simulate -- --delay=800 --fail=spider_count,mri_control
   sesión `en_curso`, envía un lote de 2 lecturas (FC 70–105 en caminata aleatoria, HRV 30–60,
   EDA 1–4, temperatura 32–35). En `pausada` no envía. La tecla `s` fuerza un pico de FC
   (125–140) durante 20 s; `q` o Ctrl+C sale.
+- `--only=watch` / `--only=quest` corre solo el reloj o solo el visor; sin el flag corren
+  ambos. Al arrancar imprime el modo activo (`Modo: solo reloj`, `Modo: solo visor`,
+  `Modo: visor + reloj`). `npm run simulate:watch` equivale a `npm run simulate -- --only=watch`.
 - `--api=<url>` cambia la base (default `http://localhost:3000/api`).
 - `--quest-key=<apiKey>` / `--watch-key=<apiKey>` tienen prioridad sobre `SIM_QUEST_KEY` /
   `SIM_WATCH_KEY` del `.env`. Se recomienda el `.env`: npm imprime los argumentos y la `apiKey`
