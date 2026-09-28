@@ -4424,6 +4424,335 @@
 					}
 				}
 			]
+		},
+		{
+			"name": "Día 5",
+			"item": [
+				{
+					"name": "Terapeuta agrega nota privada a la sesión",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.test(\"Status 200\", () => pm.response.to.have.status(200));",
+									"pm.test(\"Sesión finalizada con nota\", () => {",
+									"  const s = pm.response.json().session;",
+									"  pm.expect(s.status).to.eql(\"finalizada\");",
+									"  pm.expect(s.therapistNotes).to.eql(\"NOTA-CLINICA-PRIVADA\");",
+									"});"
+								]
+							}
+						}
+					],
+					"request": {
+						"method": "PATCH",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/api/sessions/{{sessionId}}",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"sessions",
+								"{{sessionId}}"
+							]
+						},
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{tokenA}}",
+									"type": "string"
+								}
+							]
+						},
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"therapistNotes\": \"NOTA-CLINICA-PRIVADA\",\n  \"anxietyLevel\": 6\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						}
+					}
+				},
+				{
+					"name": "Login paciente (portal)",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.test(\"Status 200\", () => pm.response.to.have.status(200));",
+									"const j = pm.response.json();",
+									"pm.test(\"Rol patient\", () => pm.expect(j.user.role).to.eql(\"patient\"));",
+									"pm.environment.set(\"tokenPortal\", j.token);"
+								]
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/api/auth/login",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"auth",
+								"login"
+							]
+						},
+						"auth": {
+							"type": "noauth"
+						},
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"email\": \"{{patientEmail}}\",\n  \"password\": \"12345678\"\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						}
+					}
+				},
+				{
+					"name": "GET /me",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.test(\"Status 200\", () => pm.response.to.have.status(200));",
+									"const j = pm.response.json();",
+									"pm.test(\"Campos esperados (y solo esos)\", () => pm.expect(Object.keys(j).sort()).to.eql([\"createdAt\", \"email\", \"id\", \"name\", \"phobia\", \"safePlace\", \"scenarios\", \"therapist\"]));",
+									"pm.test(\"Es el paciente del token\", () => { pm.expect(j.id).to.eql(pm.environment.get(\"patientId\")); pm.expect(j.email).to.eql(pm.environment.get(\"patientEmail\")); });",
+									"pm.test(\"Sin password, umbrales ni notas\", () => {",
+									"  const raw = pm.response.text();",
+									"  [\"password\", \"anxietyThreshold\", \"therapistNotes\", \"description\", \"NOTA-CLINICA-PRIVADA\"].forEach(k => pm.expect(raw).to.not.include(k));",
+									"});",
+									"pm.test(\"phobia { name, displayName }\", () => { pm.expect(Object.keys(j.phobia).sort()).to.eql([\"displayName\", \"name\"]); pm.expect(j.phobia.name).to.eql(\"nictofobia\"); });",
+									"pm.test(\"therapist solo { name }\", () => pm.expect(Object.keys(j.therapist)).to.eql([\"name\"]));",
+									"pm.test(\"safePlace solo { name }\", () => pm.expect(Object.keys(j.safePlace)).to.eql([\"name\"]));",
+									"pm.test(\"Escenarios { key, name, order } ordenados por order\", () => {",
+									"  pm.expect(j.scenarios.length).to.be.above(0);",
+									"  j.scenarios.forEach(s => pm.expect(Object.keys(s).sort()).to.eql([\"key\", \"name\", \"order\"]));",
+									"  for (let i = 1; i < j.scenarios.length; i++) pm.expect(j.scenarios[i].order).to.be.at.least(j.scenarios[i - 1].order);",
+									"});"
+								]
+							}
+						}
+					],
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/api/me",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"me"
+							]
+						},
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{tokenPortal}}",
+									"type": "string"
+								}
+							]
+						}
+					}
+				},
+				{
+					"name": "GET /me/sessions",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.test(\"Status 200\", () => pm.response.to.have.status(200));",
+									"const j = pm.response.json();",
+									"pm.test(\"{ sessions, upcomingCount }\", () => { pm.expect(Object.keys(j).sort()).to.eql([\"sessions\", \"upcomingCount\"]); pm.expect(j.upcomingCount).to.be.a(\"number\"); });",
+									"pm.test(\"Campos de cada sesión (sin notas, pausas, dispositivo ni comandos)\", () => {",
+									"  j.sessions.forEach(s => pm.expect(Object.keys(s).sort()).to.eql([\"_id\", \"anxietyLevel\", \"durationMinutes\", \"endTime\", \"scenario\", \"startTime\"]));",
+									"  pm.expect(pm.response.text()).to.not.include(\"NOTA-CLINICA-PRIVADA\");",
+									"});",
+									"pm.test(\"Incluye la sesión finalizada del flujo completo\", () => {",
+									"  const s = j.sessions.find(x => x._id === pm.environment.get(\"sessionId\"));",
+									"  pm.expect(s).to.exist;",
+									"  pm.expect(s.anxietyLevel).to.eql(6);",
+									"  pm.expect(Object.keys(s.scenario).sort()).to.eql([\"key\", \"name\", \"order\"]);",
+									"});",
+									"pm.test(\"Ordenadas por startTime descendente\", () => {",
+									"  for (let i = 1; i < j.sessions.length; i++) pm.expect(new Date(j.sessions[i].startTime) <= new Date(j.sessions[i - 1].startTime)).to.be.true;",
+									"});",
+									"// Contraste con la vista del terapeuta: mismas finalizadas y mismo conteo de programadas",
+									"pm.sendRequest({",
+									"  url: pm.environment.get(\"baseUrl\") + \"/api/sessions?patient=\" + pm.environment.get(\"patientId\"),",
+									"  header: { Authorization: \"Bearer \" + pm.environment.get(\"tokenA\") }",
+									"}, (err, res) => {",
+									"  const all = res.json();",
+									"  pm.test(\"Solo finalizadas propias (coincide con la vista del terapeuta)\", () => {",
+									"    const expected = all.filter(s => s.status === \"finalizada\").map(s => s._id).sort();",
+									"    pm.expect(j.sessions.map(s => s._id).sort()).to.eql(expected);",
+									"    pm.expect(j.upcomingCount).to.eql(all.filter(s => s.status === \"programada\").length);",
+									"  });",
+									"});"
+								]
+							}
+						}
+					],
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/api/me/sessions",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"me",
+								"sessions"
+							]
+						},
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{tokenPortal}}",
+									"type": "string"
+								}
+							]
+						}
+					}
+				},
+				{
+					"name": "GET /me con token de terapeuta",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.test(\"Status 403\", () => pm.response.to.have.status(403));"
+								]
+							}
+						}
+					],
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/api/me",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"me"
+							]
+						},
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{tokenA}}",
+									"type": "string"
+								}
+							]
+						}
+					}
+				},
+				{
+					"name": "GET /me/sessions con token de terapeuta",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.test(\"Status 403\", () => pm.response.to.have.status(403));"
+								]
+							}
+						}
+					],
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/api/me/sessions",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"me",
+								"sessions"
+							]
+						},
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{tokenA}}",
+									"type": "string"
+								}
+							]
+						}
+					}
+				},
+				{
+					"name": "GET /me sin token",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.test(\"Status 401\", () => pm.response.to.have.status(401));"
+								]
+							}
+						}
+					],
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/api/me",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"me"
+							]
+						},
+						"auth": {
+							"type": "noauth"
+						}
+					}
+				}
+			]
 		}
 	]
 }

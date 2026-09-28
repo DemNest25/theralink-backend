@@ -1,6 +1,6 @@
 # API — endpoints
 
-Base: `/api`. Roles: **T** = therapist, **A** = admin, **U** = cualquier usuario
+Base: `/api`. Roles: **T** = therapist, **A** = admin, **P** = patient, **U** = cualquier usuario
 autenticado (JWT `Authorization: Bearer <token>`). **Device** = header
 `x-device-key`. Los errores de validación de Mongoose (`ValidationError`,
 `CastError`) responden `400`.
@@ -21,6 +21,23 @@ autenticado (JWT `Authorization: Bearer <token>`). **Device** = header
 | GET | /patients/:id | JWT | T | Perfil de un paciente propio (fobia, lugar seguro, umbrales) |
 | PATCH | /users/:id/threshold | JWT | T | Umbrales de ansiedad de un paciente propio |
 | PATCH | /users/:id/safeplace | JWT | T | Lugar seguro de un paciente propio |
+
+## Portal del paciente
+
+Solo rol **P** = patient (un token de terapeuta → `403`; sin token → `401`). Todo se
+filtra por el usuario del JWT: ninguna ruta acepta un id de paciente.
+
+| Método | Ruta | Auth | Rol | Descripción |
+|---|---|---|---|---|
+| GET | /me | JWT | P | `{ id, name, email, createdAt, phobia: { name, displayName }, therapist: { name }, safePlace: { name }, scenarios: [{ key, name, order }] }` (escenarios activos de su fobia, por `order`). Cuenta desactivada → `401` |
+| GET | /me/sessions | JWT | P | `{ sessions: [{ _id, startTime, endTime, durationMinutes, anxietyLevel, scenario: { key, name, order } }], upcomingCount }`: solo sus sesiones `finalizada`, por `startTime` descendente; `upcomingCount` = sus sesiones `programada` |
+
+**Privacidad.** Las respuestas se arman campo por campo; lo que no está en la tabla no
+sale. No se exponen `therapistNotes` ni `interventionEvents`: son registro clínico del
+terapeuta, escrito para su propio trabajo y no para el paciente, y mostrarlos sin su
+mediación puede afectar el tratamiento. Tampoco `anxietyThreshold` ni
+`safePlace.description` (los configura el terapeuta), las pausas, el visor, los comandos,
+los biométricos ni el correo del terapeuta.
 
 ## Catálogo
 

@@ -30,6 +30,7 @@ app.use('/api/biometrics',require('./routes/biometric.routes'));
 app.use('/api/environments', require('./routes/environment.routes'));
 app.use('/api/users', require('./routes/user.routes'));
 app.use('/api/scenarios', require('./routes/scenario.routes'));
+app.use('/api/me', require('./routes/me.routes'));
 // /me (visor, x-device-key) va ANTES de /api/devices, que exige JWT
 app.use('/api/devices/me', require('./routes/deviceMe.routes'));
 app.use('/api/devices', require('./routes/device.routes'));
