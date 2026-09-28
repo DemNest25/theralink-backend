@@ -2,11 +2,20 @@ const mongoose = require('mongoose');
 const User = require('../models/User');
 const Environment = require('../models/Environment');
 
+// Misma regla que el esquema (minlength 8), validada a mano para que el 400 no
+// repita la contraseña recibida (el mensaje de Mongoose incluye el valor)
+const PASSWORD_RULE = 'password es requerido y debe tener al menos 8 caracteres';
+const isValidPassword = (password) => typeof password === 'string' && password.length >= 8;
+
 // POST /api/patients — solo therapist (ver patient.routes.js). assignedTherapist = req.user.id
 const createPatient = async (req, res, next) => {
   try {
     const { name, password, phobia } = req.body;
     const email = String(req.body.email || '').trim().toLowerCase();
+
+    if (!isValidPassword(password)) {
+      return res.status(400).json({ message: PASSWORD_RULE });
+    }
 
     if (!phobia || !mongoose.Types.ObjectId.isValid(phobia)) {
       return res.status(400).json({ message: 'phobia es requerido y debe ser un ObjectId válido de Environment' });
@@ -94,11 +103,9 @@ const resetPatientPassword = async (req, res, next) => {
       return res.status(404).json({ message: 'Paciente no encontrado' });
     }
 
-    // Misma regla que el esquema (minlength 8), validada aquí para que el 400
-    // no repita la contraseña recibida (el mensaje de Mongoose incluye el valor)
     const { password } = req.body;
-    if (typeof password !== 'string' || password.length < 8) {
-      return res.status(400).json({ message: 'password es requerido y debe tener al menos 8 caracteres' });
+    if (!isValidPassword(password)) {
+      return res.status(400).json({ message: PASSWORD_RULE });
     }
 
     // save() (no updateOne) para que el pre-save hashee. validateModifiedOnly: un

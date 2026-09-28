@@ -4753,6 +4753,63 @@
 					}
 				},
 				{
+					"name": "POST /patients con contraseña corta",
+					"event": [
+						{
+							"listen": "prerequest",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.variables.set(\"shortPwEmail\", `corta.${Date.now()}@test.com`);"
+								]
+							}
+						},
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.test(\"Status 400\", () => pm.response.to.have.status(400));",
+									"pm.test(\"No repite la contraseña enviada\", () => pm.expect(pm.response.text()).to.not.include(\"Corta12\"));"
+								]
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/api/patients",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"patients"
+							]
+						},
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{tokenA}}",
+									"type": "string"
+								}
+							]
+						},
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"name\": \"Paciente Clave Corta\",\n  \"email\": \"{{shortPwEmail}}\",\n  \"password\": \"Corta12\",\n  \"phobia\": \"{{envNicto}}\"\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						}
+					}
+				},
+				{
 					"name": "Reset con contraseña de 5 caracteres",
 					"event": [
 						{

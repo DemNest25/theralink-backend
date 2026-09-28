@@ -8,19 +8,21 @@ const Scenario = require('../models/Scenario');
 
 const scenarioSummary = (s) => (s ? { key: s.key, name: s.name, order: s.order } : null);
 
+// Filtro del paciente del token con cuenta vigente (desactivada o borrada → 401)
+const activePatient = (req) => ({ _id: req.user.id, role: 'patient', isActive: { $ne: false } });
+const unavailable = (res) => res.status(401).json({ message: 'Cuenta no disponible' });
+
 // GET /api/me
 const getMe = async (req, res, next) => {
   try {
-    const user = await User.findOne({ _id: req.user.id, role: 'patient', isActive: { $ne: false } })
+    const user = await User.findOne(activePatient(req))
       .select('name email createdAt phobia assignedTherapist safePlace.name')
       .populate('phobia', 'name displayName')
       .populate('assignedTherapist', 'name')
       .lean();
 
     // Token válido pero cuenta desactivada o borrada: igual que el login
-    if (!user) {
-      return res.status(401).json({ message: 'Cuenta no disponible' });
-    }
+    if (!user) return unavailable(res);
 
     const scenarios = user.phobia
       ? await Scenario.find({ environment: user.phobia._id, active: true })
@@ -47,6 +49,8 @@ const getMe = async (req, res, next) => {
 // GET /api/me/sessions — historial (solo finalizadas) + conteo de programadas
 const getMySessions = async (req, res, next) => {
   try {
+    if (!(await User.exists(activePatient(req)))) return unavailable(res);
+
     const [sessions, upcomingCount] = await Promise.all([
       Session.find({ patient: req.user.id, status: 'finalizada' })
         .sort({ startTime: -1 })
