@@ -73,9 +73,17 @@ estado final cambia cuando el visor confirma el comando.
 
 | Método | Ruta | Auth | Rol | Descripción |
 |---|---|---|---|---|
-| POST | /biometrics/:sessionId | Device | watch | Ingesta por lote `{ readings: [...] }` → `201 { inserted, rejected }` |
+| POST | /biometrics/:sessionId | Device | watch | Ingesta por lote `{ readings: [...] }`. Sesión `en_curso`/`pausada` → `201 { inserted, rejected, sessionClosed: false }`. Finalizada hace ≤ 10 min → `200 { inserted, discarded, sessionClosed: true }` (ver abajo). Si no → `409 { code: 'SESSION_CLOSED' }` |
 | GET | /biometrics/session/:sessionId | JWT | T | Lecturas de una sesión propia, en orden cronológico |
 | GET | /biometrics/session/:sessionId/summary | JWT | T | Resumen estadístico de una sesión propia |
+
+**Lecturas atrasadas.** Con la pantalla apagada el reloj puede entregar lotes después de
+que la sesión se finalizó. Durante 10 min tras `endTime` (`LATE_READINGS_GRACE_MS` en
+`biometric.controller.js`) el lote se acepta, pero solo se guardan las lecturas con
+`timestamp` entre `startTime` y `endTime` (± 5 s); el resto, y las inválidas, se cuentan en
+`discarded`. Las guardadas se emiten por `biometric:new`. `sessionClosed: true` indica al
+reloj que vacíe su cola y se detenga. Pasado el margen, o en una sesión `cancelada`,
+responde `409 SESSION_CLOSED`. En sesiones activas la validación no cambia.
 
 ## Reloj (Wear OS)
 

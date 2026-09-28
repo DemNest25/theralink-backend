@@ -4,6 +4,22 @@ const mongoose = require('mongoose');
 const { loadOwnedSession } = require('../utils/ownership');
 const { emitBiometricBatch } = require('../realtime/io');
 
+// Lecturas atrasadas: el reloj con la pantalla apagada puede entregar lotes
+// después de que la sesión se finalizó. Durante este margen tras endTime se
+// aceptan, pero solo las medidas dentro de la sesión (± la tolerancia).
+const LATE_READINGS_GRACE_MS = 10 * 60 * 1000;
+const LATE_READINGS_TOLERANCE_MS = 5 * 1000;
+
+// ¿Sesión finalizada que todavía acepta lecturas atrasadas?
+function inLateGrace(session, now = Date.now()) {
+  return session.status === 'finalizada'
+    && session.startTime && session.endTime
+    && now - session.endTime.getTime() <= LATE_READINGS_GRACE_MS;
+}
+
+// Timestamp tal como lo guardaría Mongoose (mismo cast y mismo default)
+const castTimestamp = (doc) => new Biometric(doc).timestamp;
+
 // GET /api/biometrics/session/:sessionId
 const getBiometricsBySession = async (req, res, next) => {
   try {
@@ -83,7 +99,8 @@ const ingestReadings = async (req, res, next) => {
       return res.status(403).json({ error: 'Sesión no corresponde a este dispositivo' });
     }
 
-    if (!['en_curso', 'pausada'].includes(session.status)) {
+    const late = inLateGrace(session);
+    if (!['en_curso', 'pausada'].includes(session.status) && !late) {
       return res.status(409).json({ message: 'La sesión no está activa', code: 'SESSION_CLOSED' });
     }
 
@@ -97,6 +114,23 @@ const ingestReadings = async (req, res, next) => {
       deviceId: req.device.deviceId
     }));
 
+    if (late) {
+      // Solo lo medido dentro de la sesión; el resto (y lo inválido) se descarta
+      const from = session.startTime.getTime() - LATE_READINGS_TOLERANCE_MS;
+      const to = session.endTime.getTime() + LATE_READINGS_TOLERANCE_MS;
+      const inWindow = docs.filter(d => {
+        const t = castTimestamp(d)?.getTime();
+        return t >= from && t <= to;
+      });
+
+      const inserted = inWindow.length > 0
+        ? await Biometric.insertMany(inWindow, { ordered: false })
+        : [];
+
+      emitBiometricBatch(sessionId, inserted);
+      return res.json({ inserted: inserted.length, discarded: readings.length - inserted.length, sessionClosed: true });
+    }
+
     // ordered:false → las lecturas que fallan validación (fuera de rango) se
     // descartan y el resto se inserta; devuelve solo las insertadas.
     const inserted = docs.length > 0
@@ -109,7 +143,7 @@ const ingestReadings = async (req, res, next) => {
     }
 
     emitBiometricBatch(sessionId, inserted);
-    res.status(201).json({ inserted: inserted.length, rejected });
+    res.status(201).json({ inserted: inserted.length, rejected, sessionClosed: false });
   } catch (err) {
     next(err);
   }
