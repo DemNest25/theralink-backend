@@ -19,6 +19,7 @@ autenticado (JWT `Authorization: Bearer <token>`). **Device** = header
 | POST | /patients | JWT | T | Crea un paciente asignado al terapeuta (requiere `phobia`, un Environment activo) |
 | GET | /patients | JWT | T | Lista los pacientes del terapeuta autenticado |
 | GET | /patients/:id | JWT | T | Perfil de un paciente propio (fobia, lugar seguro, umbrales) |
+| POST | /patients/:id/reset-password | JWT | T | Body `{ password }` (mínimo 8, mismas reglas que al crear) → `200 { message }`. Se guarda hasheada; nunca se devuelve. Paciente inexistente o ajeno → `404` |
 | PATCH | /users/:id/threshold | JWT | T | Umbrales de ansiedad de un paciente propio |
 | PATCH | /users/:id/safeplace | JWT | T | Lugar seguro de un paciente propio |
 

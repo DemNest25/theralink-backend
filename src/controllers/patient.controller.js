@@ -81,4 +81,35 @@ const getPatientById = async (req, res, next) => {
   }
 };
 
-module.exports = { createPatient, getPatients, getPatientById };
+// POST /api/patients/:id/reset-password  { password } — solo el terapeuta asignado
+const resetPatientPassword = async (req, res, next) => {
+  try {
+    const patient = await User.findOne({
+      _id: req.params.id,
+      role: 'patient',
+      assignedTherapist: req.user.id
+    });
+
+    if (!patient) {
+      return res.status(404).json({ message: 'Paciente no encontrado' });
+    }
+
+    // Misma regla que el esquema (minlength 8), validada aquí para que el 400
+    // no repita la contraseña recibida (el mensaje de Mongoose incluye el valor)
+    const { password } = req.body;
+    if (typeof password !== 'string' || password.length < 8) {
+      return res.status(400).json({ message: 'password es requerido y debe tener al menos 8 caracteres' });
+    }
+
+    // save() (no updateOne) para que el pre-save hashee. validateModifiedOnly: un
+    // documento antiguo con otro campo inválido no debe bloquear el reset.
+    patient.password = password;
+    await patient.save({ validateModifiedOnly: true });
+
+    res.json({ message: 'Contraseña restablecida' });
+  } catch (err) {
+    next(err);
+  }
+};
+
+module.exports = { createPatient, getPatients, getPatientById, resetPatientPassword };
