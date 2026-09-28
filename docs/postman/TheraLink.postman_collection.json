@@ -1320,7 +1320,8 @@
 									"pm.test(\"Status 200\", () => pm.response.to.have.status(200));",
 									"const s = pm.response.json().session;",
 									"pm.test(\"Queda cargando\", () => pm.expect(s.status).to.eql(\"cargando\"));",
-									"pm.test(\"pendingAction start\", () => pm.expect(s.pendingAction).to.eql(\"start\"));"
+									"pm.test(\"pendingAction start\", () => pm.expect(s.pendingAction).to.eql(\"start\"));",
+									"pm.test(\"Guarda el reloj elegido\", () => pm.expect(s.watch).to.be.a(\"string\").and.not.empty);"
 								]
 							}
 						}
@@ -1659,7 +1660,10 @@
 								"type": "text/javascript",
 								"exec": [
 									"pm.test(\"Status 201\", () => pm.response.to.have.status(201));",
-									"pm.test(\"2 insertadas\", () => pm.expect(pm.response.json().inserted).to.eql(2));"
+									"const j = pm.response.json();",
+									"pm.test(\"2 insertadas, 0 rechazadas\", () => { pm.expect(j.inserted).to.eql(2); pm.expect(j.rejected).to.eql(0); pm.expect(j.rejectedReasons).to.eql([]); });",
+									"pm.test(\"sessionClosed false\", () => pm.expect(j.sessionClosed).to.eql(false));",
+									"pm.test(\"serverTime en ISO\", () => pm.expect(new Date(j.serverTime).toISOString()).to.eql(j.serverTime));"
 								]
 							}
 						}
@@ -1708,7 +1712,65 @@
 								"exec": [
 									"pm.test(\"Status 201\", () => pm.response.to.have.status(201));",
 									"const j = pm.response.json();",
-									"pm.test(\"1 insertada, 1 rechazada\", () => { pm.expect(j.inserted).to.eql(1); pm.expect(j.rejected).to.eql(1); });"
+									"pm.test(\"1 insertada, 1 rechazada\", () => { pm.expect(j.inserted).to.eql(1); pm.expect(j.rejected).to.eql(1); });",
+									"pm.test(\"Motivo: heartRate 500 en la lectura 0\", () => { pm.expect(j.rejectedReasons).to.have.lengthOf(1); pm.expect(j.rejectedReasons[0]).to.include({ index: 0, field: \"heartRate\", value: 500 }); });",
+									"pm.test(\"serverTime en ISO\", () => pm.expect(new Date(j.serverTime).toISOString()).to.eql(j.serverTime));"
+								]
+							}
+						}
+					]
+				},
+				{
+					"name": "Reloj envía lote sin lecturas válidas",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "x-device-key",
+								"value": "{{watchKey}}",
+								"type": "text"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/api/biometrics/{{sessionId}}",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"biometrics",
+								"{{sessionId}}"
+							]
+						},
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"readings\": [\n    {\n      \"timestamp\": \"{{$isoTimestamp}}\",\n      \"heartRate\": 10\n    },\n    {\n      \"timestamp\": \"no-es-fecha\",\n      \"eda\": 0.5\n    },\n    \"texto\"\n  ]\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"auth": {
+							"type": "noauth"
+						}
+					},
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.test(\"Status 400\", () => pm.response.to.have.status(400));",
+									"const j = pm.response.json();",
+									"pm.test(\"0 insertadas, 3 rechazadas\", () => { pm.expect(j.inserted).to.eql(0); pm.expect(j.rejected).to.eql(3); });",
+									"pm.test(\"Un motivo por lectura (campo y valor)\", () => {",
+									"  const byIndex = Object.fromEntries(j.rejectedReasons.map(r => [r.index, r]));",
+									"  pm.expect(byIndex[0]).to.include({ field: \"heartRate\", value: 10 });",
+									"  pm.expect(byIndex[1]).to.include({ field: \"timestamp\", value: \"no-es-fecha\" });",
+									"  pm.expect(byIndex[2].field).to.eql(null);",
+									"});",
+									"pm.test(\"serverTime en ISO\", () => pm.expect(new Date(j.serverTime).toISOString()).to.eql(j.serverTime));"
 								]
 							}
 						}
@@ -2661,7 +2723,8 @@
 								"exec": [
 									"pm.test(\"Status 200 (margen de gracia)\", () => pm.response.to.have.status(200));",
 									"const j = pm.response.json();",
-									"pm.test(\"Se descarta y avisa sessionClosed\", () => pm.expect(j).to.eql({ inserted: 0, discarded: 1, sessionClosed: true }));"
+									"pm.test(\"Se descarta y avisa sessionClosed\", () => pm.expect(_.omit(j, \"serverTime\")).to.eql({ inserted: 0, rejected: 0, discarded: 1, rejectedReasons: [], sessionClosed: true }));",
+									"pm.test(\"serverTime en ISO\", () => pm.expect(new Date(j.serverTime).toISOString()).to.eql(j.serverTime));"
 								]
 							}
 						}
@@ -5141,7 +5204,8 @@
 										"exec": [
 											"pm.test(\"Status 200\", () => pm.response.to.have.status(200));",
 											"const j = pm.response.json();",
-											"pm.test(\"2 dentro de la sesión, 2 fuera\", () => pm.expect(j).to.eql({ inserted: 2, discarded: 2, sessionClosed: true }));"
+											"pm.test(\"2 dentro de la sesión, 2 fuera\", () => pm.expect(_.omit(j, \"serverTime\")).to.eql({ inserted: 2, rejected: 0, discarded: 2, rejectedReasons: [], sessionClosed: true }));",
+											"pm.test(\"serverTime en ISO\", () => pm.expect(new Date(j.serverTime).toISOString()).to.eql(j.serverTime));"
 										]
 									}
 								}

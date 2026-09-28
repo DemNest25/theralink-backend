@@ -30,6 +30,12 @@ const sessionSchema = new mongoose.Schema(
       ref: 'Device',
       default: null
     },
+    // Reloj elegido al iniciar (opcional): la web avisa si deja de enviar lecturas
+    watch: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'Device',
+      default: null
+    },
     status: {
       type: String,
       enum: ['programada', 'cargando', 'en_curso', 'pausada', 'finalizada', 'cancelada'],

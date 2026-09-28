@@ -77,7 +77,7 @@ const startSession = async (req, res, next) => {
     const updated = await claimSession(
       session._id,
       { status: 'programada' },
-      { scenario: scenario._id, device: quest._id, status: 'cargando', pendingAction: 'start' }
+      { scenario: scenario._id, device: quest._id, watch: watch?._id ?? null, status: 'cargando', pendingAction: 'start' }
     );
     if (!updated) {
       return conflict(res, 'La sesión cambió de estado, intenta de nuevo');

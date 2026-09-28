@@ -17,8 +17,40 @@ function inLateGrace(session, now = Date.now()) {
     && now - session.endTime.getTime() <= LATE_READINGS_GRACE_MS;
 }
 
-// Timestamp tal como lo guardaría Mongoose (mismo cast y mismo default)
-const castTimestamp = (doc) => new Biometric(doc).timestamp;
+// Motivos de rechazo que se devuelven por lote (el conteo `rejected` es completo)
+const MAX_REJECTED_REASONS = 20;
+
+/**
+ * Valida cada lectura por separado con el esquema de Biometric. Devuelve los
+ * documentos válidos y, de las inválidas, un motivo por campo que falló
+ * ({ index, field, value, message }), para que el reloj sepa qué se rechazó.
+ */
+function validateReadings(readings, base) {
+  const valid = [];
+  const reasons = [];
+  let rejected = 0;
+
+  readings.forEach((reading, index) => {
+    if (!reading || typeof reading !== 'object' || Array.isArray(reading)) {
+      rejected++;
+      const kind = Array.isArray(reading) ? 'array' : reading === null ? 'null' : typeof reading;
+      reasons.push({ index, field: null, value: null, message: `La lectura no es un objeto (${kind})` });
+      return;
+    }
+    const doc = new Biometric({ ...reading, ...base });
+    const err = doc.validateSync();
+    if (err) {
+      rejected++;
+      for (const e of Object.values(err.errors)) {
+        reasons.push({ index, field: e.path, value: e.value ?? null, message: e.message });
+      }
+      return;
+    }
+    valid.push(doc);
+  });
+
+  return { valid, rejected, rejectedReasons: reasons.slice(0, MAX_REJECTED_REASONS) };
+}
 
 // GET /api/biometrics/session/:sessionId
 const getBiometricsBySession = async (req, res, next) => {
@@ -104,22 +136,20 @@ const ingestReadings = async (req, res, next) => {
       return res.status(409).json({ message: 'La sesión no está activa', code: 'SESSION_CLOSED' });
     }
 
-    // Entradas que no son objetos cuentan como rechazadas (no se insertan vacías)
-    const validShape = readings.filter(r => r && typeof r === 'object' && !Array.isArray(r));
-
-    const docs = validShape.map(reading => ({
-      ...reading,
+    // Hora del servidor: el reloj calcula su desfase (reloj − servidor) para el log
+    const serverTime = new Date().toISOString();
+    const { valid, rejected, rejectedReasons } = validateReadings(readings, {
       session: sessionId,
       patient: req.device.patient,
       deviceId: req.device.deviceId
-    }));
+    });
 
     if (late) {
-      // Solo lo medido dentro de la sesión; el resto (y lo inválido) se descarta
+      // Solo lo medido dentro de la sesión; lo válido pero fuera de ella se descarta
       const from = session.startTime.getTime() - LATE_READINGS_TOLERANCE_MS;
       const to = session.endTime.getTime() + LATE_READINGS_TOLERANCE_MS;
-      const inWindow = docs.filter(d => {
-        const t = castTimestamp(d)?.getTime();
+      const inWindow = valid.filter(d => {
+        const t = d.timestamp?.getTime();
         return t >= from && t <= to;
       });
 
@@ -128,22 +158,25 @@ const ingestReadings = async (req, res, next) => {
         : [];
 
       emitBiometricBatch(sessionId, inserted);
-      return res.json({ inserted: inserted.length, discarded: readings.length - inserted.length, sessionClosed: true });
+      return res.json({
+        inserted: inserted.length,
+        rejected,
+        discarded: valid.length - inWindow.length,
+        rejectedReasons,
+        serverTime,
+        sessionClosed: true
+      });
     }
 
-    // ordered:false → las lecturas que fallan validación (fuera de rango) se
-    // descartan y el resto se inserta; devuelve solo las insertadas.
-    const inserted = docs.length > 0
-      ? await Biometric.insertMany(docs, { ordered: false })
-      : [];
-    const rejected = readings.length - inserted.length;
-
-    if (inserted.length === 0 && rejected > 0) {
-      return res.status(400).json({ message: 'Ninguna lectura válida en el lote', rejected });
+    // Aceptación parcial: se guardan las válidas; solo un lote sin ninguna es 400
+    if (valid.length === 0) {
+      return res.status(400).json({ message: 'Ninguna lectura válida en el lote', inserted: 0, rejected, rejectedReasons, serverTime });
     }
+
+    const inserted = await Biometric.insertMany(valid, { ordered: false });
 
     emitBiometricBatch(sessionId, inserted);
-    res.status(201).json({ inserted: inserted.length, rejected, sessionClosed: false });
+    res.status(201).json({ inserted: inserted.length, rejected, rejectedReasons, serverTime, sessionClosed: false });
   } catch (err) {
     next(err);
   }
