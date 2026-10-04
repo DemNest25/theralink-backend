@@ -1,0 +1,4429 @@
+{
+	"info": {
+		"_postman_id": "7a11fc84-a389-4228-a4af-5a8b871d2b82",
+		"name": "TheraLink - Día 1 (ciclo de sesión)",
+		"description": "Ejecutar en orden con el Collection Runner, usando el environment 'TheraLink local'.",
+		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+	},
+	"item": [
+		{
+			"name": "00 Setup",
+			"item": [
+				{
+					"name": "Login terapeuta A",
+					"request": {
+						"method": "POST",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/api/auth/login",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"auth",
+								"login"
+							]
+						},
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"email\": \"{{emailA}}\",\n  \"password\": \"{{passA}}\"\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"auth": {
+							"type": "noauth"
+						}
+					},
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.test(\"Status 200\", () => pm.response.to.have.status(200));",
+									"const j = pm.response.json();",
+									"pm.environment.set(\"tokenA\", j.token);",
+									"pm.environment.set(\"therapistAId\", j.user.id);"
+								]
+							}
+						}
+					]
+				},
+				{
+					"name": "Login terapeuta B",
+					"request": {
+						"method": "POST",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/api/auth/login",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"auth",
+								"login"
+							]
+						},
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"email\": \"{{emailB}}\",\n  \"password\": \"{{passB}}\"\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"auth": {
+							"type": "noauth"
+						}
+					},
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.test(\"Status 200\", () => pm.response.to.have.status(200));",
+									"pm.environment.set(\"tokenB\", pm.response.json().token);"
+								]
+							}
+						}
+					]
+				},
+				{
+					"name": "Environments activos",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/api/environments",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"environments"
+							]
+						},
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{tokenA}}",
+									"type": "string"
+								}
+							]
+						}
+					},
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.test(\"Status 200\", () => pm.response.to.have.status(200));",
+									"const j = pm.response.json();",
+									"pm.test(\"Hay 3 environments activos\", () => pm.expect(j.length).to.eql(3));",
+									"const n = j.find(e => e.name === \"nictofobia\");",
+									"const a = j.find(e => e.name === \"aracnofobia\");",
+									"if (n) pm.environment.set(\"envNicto\", n._id);",
+									"if (a) pm.environment.set(\"envArac\", a._id);"
+								]
+							}
+						}
+					]
+				},
+				{
+					"name": "Quest heartbeat",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "x-device-key",
+								"value": "{{questKey}}",
+								"type": "text"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/api/devices/me/commands",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"devices",
+								"me",
+								"commands"
+							]
+						},
+						"auth": {
+							"type": "noauth"
+						}
+					},
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.test(\"Status 200\", () => pm.response.to.have.status(200));",
+									"pm.test(\"Responde con commands (nunca vacío/204)\", () => pm.expect(pm.response.json()).to.have.property(\"commands\"));"
+								]
+							}
+						}
+					]
+				}
+			]
+		},
+		{
+			"name": "01 Autenticación",
+			"item": [
+				{
+					"name": "Registro público cerrado",
+					"request": {
+						"method": "POST",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/api/auth/register",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"auth",
+								"register"
+							]
+						},
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"name\": \"X\",\n  \"email\": \"x@x.com\",\n  \"password\": \"12345678\",\n  \"role\": \"therapist\"\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"auth": {
+							"type": "noauth"
+						}
+					},
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.test(\"Status 410\", () => pm.response.to.have.status(410));"
+								]
+							}
+						}
+					]
+				},
+				{
+					"name": "Login con contraseña incorrecta",
+					"request": {
+						"method": "POST",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/api/auth/login",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"auth",
+								"login"
+							]
+						},
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"email\": \"{{emailA}}\",\n  \"password\": \"incorrecta123\"\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"auth": {
+							"type": "noauth"
+						}
+					},
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.test(\"Status 401\", () => pm.response.to.have.status(401));"
+								]
+							}
+						}
+					]
+				}
+			]
+		},
+		{
+			"name": "02 Pacientes",
+			"item": [
+				{
+					"name": "Crear paciente sin phobia",
+					"request": {
+						"method": "POST",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/api/patients",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"patients"
+							]
+						},
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"name\": \"Paciente Prueba\",\n  \"email\": \"{{patientEmail}}\",\n  \"password\": \"12345678\"\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{tokenA}}",
+									"type": "string"
+								}
+							]
+						}
+					},
+					"event": [
+						{
+							"listen": "prerequest",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.environment.set(\"patientEmail\", `paciente.${Date.now()}@test.com`);"
+								]
+							}
+						},
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.test(\"Status 400\", () => pm.response.to.have.status(400));"
+								]
+							}
+						}
+					]
+				},
+				{
+					"name": "Crear paciente con phobia inválida",
+					"request": {
+						"method": "POST",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/api/patients",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"patients"
+							]
+						},
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"name\": \"Paciente Prueba\",\n  \"email\": \"{{patientEmail}}\",\n  \"password\": \"12345678\",\n  \"phobia\": \"123\"\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{tokenA}}",
+									"type": "string"
+								}
+							]
+						}
+					},
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.test(\"Status 400\", () => pm.response.to.have.status(400));"
+								]
+							}
+						}
+					]
+				},
+				{
+					"name": "Crear paciente con Environment inexistente",
+					"request": {
+						"method": "POST",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/api/patients",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"patients"
+							]
+						},
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"name\": \"Paciente Prueba\",\n  \"email\": \"{{patientEmail}}\",\n  \"password\": \"12345678\",\n  \"phobia\": \"66f000000000000000000000\"\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{tokenA}}",
+									"type": "string"
+								}
+							]
+						}
+					},
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.test(\"Status 400\", () => pm.response.to.have.status(400));"
+								]
+							}
+						}
+					]
+				},
+				{
+					"name": "Crear paciente válido",
+					"request": {
+						"method": "POST",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/api/patients",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"patients"
+							]
+						},
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"name\": \"Paciente Prueba\",\n  \"email\": \"{{patientEmail}}\",\n  \"password\": \"12345678\",\n  \"phobia\": \"{{envNicto}}\"\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{tokenA}}",
+									"type": "string"
+								}
+							]
+						}
+					},
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.test(\"Status 201\", () => pm.response.to.have.status(201));",
+									"const p = pm.response.json().patient;",
+									"pm.environment.set(\"patientId\", p._id || p.id);",
+									"pm.test(\"Asignado al terapeuta A\", () => pm.expect(String(p.assignedTherapist)).to.eql(pm.environment.get(\"therapistAId\")));"
+								]
+							}
+						}
+					]
+				},
+				{
+					"name": "Crear paciente con email duplicado",
+					"request": {
+						"method": "POST",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/api/patients",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"patients"
+							]
+						},
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"name\": \"Paciente Prueba\",\n  \"email\": \"{{patientEmail}}\",\n  \"password\": \"12345678\",\n  \"phobia\": \"{{envNicto}}\"\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{tokenA}}",
+									"type": "string"
+								}
+							]
+						}
+					},
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.test(\"Status 400\", () => pm.response.to.have.status(400));"
+								]
+							}
+						}
+					]
+				},
+				{
+					"name": "Listar pacientes (A lo ve)",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/api/patients",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"patients"
+							]
+						},
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{tokenA}}",
+									"type": "string"
+								}
+							]
+						}
+					},
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.test(\"Status 200\", () => pm.response.to.have.status(200));",
+									"pm.test(\"Aparece el paciente\", () => pm.expect(pm.response.json().map(p => p._id)).to.include(pm.environment.get(\"patientId\")));"
+								]
+							}
+						}
+					]
+				},
+				{
+					"name": "Listar pacientes (B no lo ve)",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/api/patients",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"patients"
+							]
+						},
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{tokenB}}",
+									"type": "string"
+								}
+							]
+						}
+					},
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.test(\"Status 200\", () => pm.response.to.have.status(200));",
+									"pm.test(\"No aparece el paciente de A\", () => pm.expect(pm.response.json().map(p => p._id)).to.not.include(pm.environment.get(\"patientId\")));"
+								]
+							}
+						}
+					]
+				},
+				{
+					"name": "Detalle del paciente (A)",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/api/patients/{{patientId}}",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"patients",
+								"{{patientId}}"
+							]
+						},
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{tokenA}}",
+									"type": "string"
+								}
+							]
+						}
+					},
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.test(\"Status 200\", () => pm.response.to.have.status(200));",
+									"const j = pm.response.json();",
+									"pm.test(\"Fobia poblada\", () => pm.expect(j.phobia.name).to.eql(\"nictofobia\"));",
+									"pm.test(\"Sin password\", () => pm.expect(j).to.not.have.property(\"password\"));"
+								]
+							}
+						}
+					]
+				},
+				{
+					"name": "Detalle del paciente (B)",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/api/patients/{{patientId}}",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"patients",
+								"{{patientId}}"
+							]
+						},
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{tokenB}}",
+									"type": "string"
+								}
+							]
+						}
+					},
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.test(\"Status 404\", () => pm.response.to.have.status(404));"
+								]
+							}
+						}
+					]
+				},
+				{
+					"name": "Login paciente",
+					"request": {
+						"method": "POST",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/api/auth/login",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"auth",
+								"login"
+							]
+						},
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"email\": \"{{patientEmail}}\",\n  \"password\": \"12345678\"\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"auth": {
+							"type": "noauth"
+						}
+					},
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.test(\"Status 200\", () => pm.response.to.have.status(200));",
+									"pm.environment.set(\"tokenPaciente\", pm.response.json().token);"
+								]
+							}
+						}
+					]
+				},
+				{
+					"name": "Paciente intenta listar pacientes",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/api/patients",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"patients"
+							]
+						},
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{tokenPaciente}}",
+									"type": "string"
+								}
+							]
+						}
+					},
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.test(\"Status 403\", () => pm.response.to.have.status(403));"
+								]
+							}
+						}
+					]
+				}
+			]
+		},
+		{
+			"name": "03 Catálogo",
+			"item": [
+				{
+					"name": "Escenarios de nictofobia",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/api/scenarios?environment={{envNicto}}",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"scenarios"
+							],
+							"query": [
+								{
+									"key": "environment",
+									"value": "{{envNicto}}"
+								}
+							]
+						},
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{tokenA}}",
+									"type": "string"
+								}
+							]
+						}
+					},
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.test(\"Status 200\", () => pm.response.to.have.status(200));",
+									"const j = pm.response.json();",
+									"pm.test(\"3 escenarios en orden 1-2-3\", () => pm.expect(j.map(s => s.order)).to.eql([1, 2, 3]));",
+									"pm.test(\"mapName completos\", () => j.forEach(s => pm.expect(s.mapName).to.not.include(\"COMPLETAR\")));",
+									"if (j.length) pm.environment.set(\"scenarioNicto\", j[0]._id);"
+								]
+							}
+						}
+					]
+				},
+				{
+					"name": "Escenarios de aracnofobia",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/api/scenarios?environment={{envArac}}",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"scenarios"
+							],
+							"query": [
+								{
+									"key": "environment",
+									"value": "{{envArac}}"
+								}
+							]
+						},
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{tokenA}}",
+									"type": "string"
+								}
+							]
+						}
+					},
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.test(\"Status 200\", () => pm.response.to.have.status(200));",
+									"const j = pm.response.json();",
+									"if (j.length) pm.environment.set(\"scenarioArac\", j[0]._id);"
+								]
+							}
+						}
+					]
+				},
+				{
+					"name": "Dispositivos",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/api/devices",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"devices"
+							]
+						},
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{tokenA}}",
+									"type": "string"
+								}
+							]
+						}
+					},
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.test(\"Status 200\", () => pm.response.to.have.status(200));",
+									"const j = pm.response.json();",
+									"const ids = j.map(d => d.deviceId);",
+									"pm.test(\"Incluye Quest y reloj\", () => { pm.expect(ids).to.include(pm.environment.get(\"questDeviceId\")); pm.expect(ids).to.include(pm.environment.get(\"watchDeviceId\")); });",
+									"pm.test(\"Nunca expone apiKey\", () => j.forEach(d => pm.expect(d).to.not.have.property(\"apiKey\")));"
+								]
+							}
+						}
+					]
+				}
+			]
+		},
+		{
+			"name": "04 Crear sesión",
+			"item": [
+				{
+					"name": "Sesión con fobia distinta",
+					"request": {
+						"method": "POST",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/api/sessions",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"sessions"
+							]
+						},
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"patient\": \"{{patientId}}\",\n  \"environment\": \"{{envArac}}\"\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{tokenA}}",
+									"type": "string"
+								}
+							]
+						}
+					},
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.test(\"Status 400\", () => pm.response.to.have.status(400));"
+								]
+							}
+						}
+					]
+				},
+				{
+					"name": "Sesión con paciente inexistente",
+					"request": {
+						"method": "POST",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/api/sessions",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"sessions"
+							]
+						},
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"patient\": \"66f000000000000000000000\"\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{tokenA}}",
+									"type": "string"
+								}
+							]
+						}
+					},
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.test(\"Status 404\", () => pm.response.to.have.status(404));"
+								]
+							}
+						}
+					]
+				},
+				{
+					"name": "Sesión por terapeuta B",
+					"request": {
+						"method": "POST",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/api/sessions",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"sessions"
+							]
+						},
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"patient\": \"{{patientId}}\"\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{tokenB}}",
+									"type": "string"
+								}
+							]
+						}
+					},
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.test(\"Status 403\", () => pm.response.to.have.status(403));"
+								]
+							}
+						}
+					]
+				},
+				{
+					"name": "Sesión por el paciente",
+					"request": {
+						"method": "POST",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/api/sessions",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"sessions"
+							]
+						},
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"patient\": \"{{patientId}}\"\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{tokenPaciente}}",
+									"type": "string"
+								}
+							]
+						}
+					},
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.test(\"Status 403\", () => pm.response.to.have.status(403));"
+								]
+							}
+						}
+					]
+				},
+				{
+					"name": "Crear sesión válida",
+					"request": {
+						"method": "POST",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/api/sessions",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"sessions"
+							]
+						},
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"patient\": \"{{patientId}}\"\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{tokenA}}",
+									"type": "string"
+								}
+							]
+						}
+					},
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.test(\"Status 201\", () => pm.response.to.have.status(201));",
+									"const s = pm.response.json().session;",
+									"pm.environment.set(\"sessionId\", s._id);",
+									"pm.test(\"Nace programada\", () => pm.expect(s.status).to.eql(\"programada\"));",
+									"pm.test(\"startTime null\", () => pm.expect(s.startTime).to.eql(null));"
+								]
+							}
+						}
+					]
+				},
+				{
+					"name": "Terapeuta B consulta la sesión",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/api/sessions/{{sessionId}}",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"sessions",
+								"{{sessionId}}"
+							]
+						},
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{tokenB}}",
+									"type": "string"
+								}
+							]
+						}
+					},
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.test(\"Status 403\", () => pm.response.to.have.status(403));"
+								]
+							}
+						}
+					]
+				}
+			]
+		},
+		{
+			"name": "05 Ciclo de vida completo",
+			"item": [
+				{
+					"name": "Quest heartbeat (queda online)",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "x-device-key",
+								"value": "{{questKey}}",
+								"type": "text"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/api/devices/me/commands",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"devices",
+								"me",
+								"commands"
+							]
+						},
+						"auth": {
+							"type": "noauth"
+						}
+					},
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.test(\"Status 200\", () => pm.response.to.have.status(200));"
+								]
+							}
+						}
+					]
+				},
+				{
+					"name": "Start con escenario de otra fobia",
+					"request": {
+						"method": "POST",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/api/sessions/{{sessionId}}/start",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"sessions",
+								"{{sessionId}}",
+								"start"
+							]
+						},
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"scenarioId\": \"{{scenarioArac}}\",\n  \"deviceId\": \"{{questDeviceId}}\",\n  \"watchDeviceId\": \"{{watchDeviceId}}\"\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{tokenA}}",
+									"type": "string"
+								}
+							]
+						}
+					},
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.test(\"Status 400\", () => pm.response.to.have.status(400));"
+								]
+							}
+						}
+					]
+				},
+				{
+					"name": "Start válido",
+					"request": {
+						"method": "POST",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/api/sessions/{{sessionId}}/start",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"sessions",
+								"{{sessionId}}",
+								"start"
+							]
+						},
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"scenarioId\": \"{{scenarioNicto}}\",\n  \"deviceId\": \"{{questDeviceId}}\",\n  \"watchDeviceId\": \"{{watchDeviceId}}\"\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{tokenA}}",
+									"type": "string"
+								}
+							]
+						}
+					},
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.test(\"Status 200\", () => pm.response.to.have.status(200));",
+									"const s = pm.response.json().session;",
+									"pm.test(\"Queda cargando\", () => pm.expect(s.status).to.eql(\"cargando\"));",
+									"pm.test(\"pendingAction start\", () => pm.expect(s.pendingAction).to.eql(\"start\"));"
+								]
+							}
+						}
+					]
+				},
+				{
+					"name": "Pausar mientras carga",
+					"request": {
+						"method": "POST",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/api/sessions/{{sessionId}}/pause",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"sessions",
+								"{{sessionId}}",
+								"pause"
+							]
+						},
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{tokenA}}",
+									"type": "string"
+								}
+							]
+						}
+					},
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.test(\"Status 409\", () => pm.response.to.have.status(409));"
+								]
+							}
+						}
+					]
+				},
+				{
+					"name": "Reloj: aún no hay sesión activa",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "x-device-key",
+								"value": "{{watchKey}}",
+								"type": "text"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/api/sessions/active",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"sessions",
+								"active"
+							]
+						},
+						"auth": {
+							"type": "noauth"
+						}
+					},
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.test(\"Status 404\", () => pm.response.to.have.status(404));"
+								]
+							}
+						}
+					]
+				},
+				{
+					"name": "Quest recibe load_scenario",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "x-device-key",
+								"value": "{{questKey}}",
+								"type": "text"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/api/devices/me/commands",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"devices",
+								"me",
+								"commands"
+							]
+						},
+						"auth": {
+							"type": "noauth"
+						}
+					},
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.test(\"Status 200\", () => pm.response.to.have.status(200));",
+									"const j = pm.response.json();",
+									"const c = (j.commands || []).find(x => x.commandType === \"load_scenario\");",
+									"pm.test(\"Incluye comando load_scenario\", () => pm.expect(c, JSON.stringify(j)).to.exist);",
+									"if (c) pm.environment.set(\"commandId\", c.id || c._id);",
+									"pm.test(\"Trae mapName\", () => pm.expect(c.payload.mapName).to.be.a(\"string\"));",
+									"pm.test(\"Sesión cargando\", () => pm.expect(j.session.status).to.eql(\"cargando\"));"
+								]
+							}
+						}
+					]
+				},
+				{
+					"name": "Quest confirma comando",
+					"request": {
+						"method": "PATCH",
+						"header": [
+							{
+								"key": "x-device-key",
+								"value": "{{questKey}}",
+								"type": "text"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/api/devices/me/commands/{{commandId}}/executed",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"devices",
+								"me",
+								"commands",
+								"{{commandId}}",
+								"executed"
+							]
+						},
+						"auth": {
+							"type": "noauth"
+						}
+					},
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.test(\"Status 200\", () => pm.response.to.have.status(200));"
+								]
+							}
+						}
+					]
+				},
+				{
+					"name": "Quest reintenta la confirmación (idempotente)",
+					"request": {
+						"method": "PATCH",
+						"header": [
+							{
+								"key": "x-device-key",
+								"value": "{{questKey}}",
+								"type": "text"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/api/devices/me/commands/{{commandId}}/executed",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"devices",
+								"me",
+								"commands",
+								"{{commandId}}",
+								"executed"
+							]
+						},
+						"auth": {
+							"type": "noauth"
+						}
+					},
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.test(\"Status 200\", () => pm.response.to.have.status(200));"
+								]
+							}
+						}
+					]
+				},
+				{
+					"name": "Sesión en curso",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/api/sessions/{{sessionId}}",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"sessions",
+								"{{sessionId}}"
+							]
+						},
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{tokenA}}",
+									"type": "string"
+								}
+							]
+						}
+					},
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.test(\"Status 200\", () => pm.response.to.have.status(200));",
+									"const s = pm.response.json();",
+									"pm.test(\"en_curso\", () => pm.expect(s.status).to.eql(\"en_curso\"));",
+									"pm.test(\"startTime registrado\", () => pm.expect(s.startTime).to.not.eql(null));",
+									"pm.test(\"Sin acción pendiente\", () => pm.expect(s.pendingAction).to.eql(null));",
+									"pm.environment.set(\"startTimeSnapshot\", s.startTime);"
+								]
+							}
+						}
+					]
+				},
+				{
+					"name": "Reloj: sesión activa",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "x-device-key",
+								"value": "{{watchKey}}",
+								"type": "text"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/api/sessions/active",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"sessions",
+								"active"
+							]
+						},
+						"auth": {
+							"type": "noauth"
+						}
+					},
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.test(\"Status 200\", () => pm.response.to.have.status(200));",
+									"const j = pm.response.json();",
+									"pm.test(\"Es la sesión de esta prueba\", () => pm.expect(j.sessionId).to.eql(pm.environment.get(\"sessionId\")));",
+									"pm.test(\"environment es string (contrato del reloj)\", () => pm.expect(j.environment).to.be.a(\"string\"));",
+									"pm.test(\"Incluye environmentName\", () => pm.expect(j.environmentName).to.eql(\"Nictofobia\"));"
+								]
+							}
+						}
+					]
+				},
+				{
+					"name": "Reloj envía lote válido",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "x-device-key",
+								"value": "{{watchKey}}",
+								"type": "text"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/api/biometrics/{{sessionId}}",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"biometrics",
+								"{{sessionId}}"
+							]
+						},
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"readings\": [\n    {\n      \"timestamp\": \"{{$isoTimestamp}}\",\n      \"heartRate\": 82\n    },\n    {\n      \"timestamp\": \"{{$isoTimestamp}}\",\n      \"eda\": 0.7\n    }\n  ]\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"auth": {
+							"type": "noauth"
+						}
+					},
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.test(\"Status 201\", () => pm.response.to.have.status(201));",
+									"pm.test(\"2 insertadas\", () => pm.expect(pm.response.json().inserted).to.eql(2));"
+								]
+							}
+						}
+					]
+				},
+				{
+					"name": "Reloj envía lote con una lectura inválida",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "x-device-key",
+								"value": "{{watchKey}}",
+								"type": "text"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/api/biometrics/{{sessionId}}",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"biometrics",
+								"{{sessionId}}"
+							]
+						},
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"readings\": [\n    {\n      \"timestamp\": \"{{$isoTimestamp}}\",\n      \"heartRate\": 500\n    },\n    {\n      \"timestamp\": \"{{$isoTimestamp}}\",\n      \"heartRate\": 90\n    }\n  ]\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"auth": {
+							"type": "noauth"
+						}
+					},
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.test(\"Status 201\", () => pm.response.to.have.status(201));",
+									"const j = pm.response.json();",
+									"pm.test(\"1 insertada, 1 rechazada\", () => { pm.expect(j.inserted).to.eql(1); pm.expect(j.rejected).to.eql(1); });"
+								]
+							}
+						}
+					]
+				},
+				{
+					"name": "Reloj envía lote vacío",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "x-device-key",
+								"value": "{{watchKey}}",
+								"type": "text"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/api/biometrics/{{sessionId}}",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"biometrics",
+								"{{sessionId}}"
+							]
+						},
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"readings\": []\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"auth": {
+							"type": "noauth"
+						}
+					},
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.test(\"Status 400\", () => pm.response.to.have.status(400));"
+								]
+							}
+						}
+					]
+				},
+				{
+					"name": "Comando de escenario",
+					"request": {
+						"method": "POST",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/api/sessions/{{sessionId}}/command",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"sessions",
+								"{{sessionId}}",
+								"command"
+							]
+						},
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"commandType\": \"dressing_room_light\",\n  \"payload\": {\n    \"state\": \"intermitente\"\n  }\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{tokenA}}",
+									"type": "string"
+								}
+							]
+						}
+					},
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.test(\"Status 201\", () => pm.response.to.have.status(201));"
+								]
+							}
+						}
+					]
+				},
+				{
+					"name": "Comando de ciclo de vida por la ruta genérica",
+					"request": {
+						"method": "POST",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/api/sessions/{{sessionId}}/command",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"sessions",
+								"{{sessionId}}",
+								"command"
+							]
+						},
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"commandType\": \"session_pause\",\n  \"payload\": {}\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{tokenA}}",
+									"type": "string"
+								}
+							]
+						}
+					},
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.test(\"Status 400\", () => pm.response.to.have.status(400));"
+								]
+							}
+						}
+					]
+				},
+				{
+					"name": "Quest recibe comando de escenario",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "x-device-key",
+								"value": "{{questKey}}",
+								"type": "text"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/api/devices/me/commands",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"devices",
+								"me",
+								"commands"
+							]
+						},
+						"auth": {
+							"type": "noauth"
+						}
+					},
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.test(\"Status 200\", () => pm.response.to.have.status(200));",
+									"const j = pm.response.json();",
+									"const c = (j.commands || []).find(x => x.commandType === \"dressing_room_light\");",
+									"pm.test(\"Incluye comando dressing_room_light\", () => pm.expect(c, JSON.stringify(j)).to.exist);",
+									"if (c) pm.environment.set(\"commandId\", c.id || c._id);"
+								]
+							}
+						}
+					]
+				},
+				{
+					"name": "Quest confirma comando",
+					"request": {
+						"method": "PATCH",
+						"header": [
+							{
+								"key": "x-device-key",
+								"value": "{{questKey}}",
+								"type": "text"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/api/devices/me/commands/{{commandId}}/executed",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"devices",
+								"me",
+								"commands",
+								"{{commandId}}",
+								"executed"
+							]
+						},
+						"auth": {
+							"type": "noauth"
+						}
+					},
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.test(\"Status 200\", () => pm.response.to.have.status(200));"
+								]
+							}
+						}
+					]
+				},
+				{
+					"name": "Pausar",
+					"request": {
+						"method": "POST",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/api/sessions/{{sessionId}}/pause",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"sessions",
+								"{{sessionId}}",
+								"pause"
+							]
+						},
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{tokenA}}",
+									"type": "string"
+								}
+							]
+						}
+					},
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.test(\"Status 200\", () => pm.response.to.have.status(200));",
+									"pm.test(\"pendingAction pause\", () => pm.expect(pm.response.json().session.pendingAction).to.eql(\"pause\"));"
+								]
+							}
+						}
+					]
+				},
+				{
+					"name": "Pausar dos veces",
+					"request": {
+						"method": "POST",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/api/sessions/{{sessionId}}/pause",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"sessions",
+								"{{sessionId}}",
+								"pause"
+							]
+						},
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{tokenA}}",
+									"type": "string"
+								}
+							]
+						}
+					},
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.test(\"Status 409\", () => pm.response.to.have.status(409));"
+								]
+							}
+						}
+					]
+				},
+				{
+					"name": "Quest recibe session_pause",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "x-device-key",
+								"value": "{{questKey}}",
+								"type": "text"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/api/devices/me/commands",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"devices",
+								"me",
+								"commands"
+							]
+						},
+						"auth": {
+							"type": "noauth"
+						}
+					},
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.test(\"Status 200\", () => pm.response.to.have.status(200));",
+									"const j = pm.response.json();",
+									"const c = (j.commands || []).find(x => x.commandType === \"session_pause\");",
+									"pm.test(\"Incluye comando session_pause\", () => pm.expect(c, JSON.stringify(j)).to.exist);",
+									"if (c) pm.environment.set(\"commandId\", c.id || c._id);"
+								]
+							}
+						}
+					]
+				},
+				{
+					"name": "Quest confirma comando",
+					"request": {
+						"method": "PATCH",
+						"header": [
+							{
+								"key": "x-device-key",
+								"value": "{{questKey}}",
+								"type": "text"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/api/devices/me/commands/{{commandId}}/executed",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"devices",
+								"me",
+								"commands",
+								"{{commandId}}",
+								"executed"
+							]
+						},
+						"auth": {
+							"type": "noauth"
+						}
+					},
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.test(\"Status 200\", () => pm.response.to.have.status(200));"
+								]
+							}
+						}
+					]
+				},
+				{
+					"name": "Sesión pausada",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/api/sessions/{{sessionId}}",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"sessions",
+								"{{sessionId}}"
+							]
+						},
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{tokenA}}",
+									"type": "string"
+								}
+							]
+						}
+					},
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.test(\"Status 200\", () => pm.response.to.have.status(200));",
+									"const s = pm.response.json();",
+									"pm.test(\"pausada\", () => pm.expect(s.status).to.eql(\"pausada\"));",
+									"pm.test(\"Pausa abierta\", () => { pm.expect(s.pauses.length).to.eql(1); pm.expect(s.pauses[0].end).to.eql(null); });"
+								]
+							}
+						}
+					]
+				},
+				{
+					"name": "Reloj: sesión pausada sigue activa",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "x-device-key",
+								"value": "{{watchKey}}",
+								"type": "text"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/api/sessions/active",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"sessions",
+								"active"
+							]
+						},
+						"auth": {
+							"type": "noauth"
+						}
+					},
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.test(\"Status 200\", () => pm.response.to.have.status(200));",
+									"pm.test(\"status pausada\", () => pm.expect(pm.response.json().status).to.eql(\"pausada\"));"
+								]
+							}
+						}
+					]
+				},
+				{
+					"name": "Reloj envía datos durante la pausa",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "x-device-key",
+								"value": "{{watchKey}}",
+								"type": "text"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/api/biometrics/{{sessionId}}",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"biometrics",
+								"{{sessionId}}"
+							]
+						},
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"readings\": [\n    {\n      \"timestamp\": \"{{$isoTimestamp}}\",\n      \"heartRate\": 75\n    }\n  ]\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"auth": {
+							"type": "noauth"
+						}
+					},
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.test(\"Status 201\", () => pm.response.to.have.status(201));"
+								]
+							}
+						}
+					]
+				},
+				{
+					"name": "Reanudar",
+					"request": {
+						"method": "POST",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/api/sessions/{{sessionId}}/resume",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"sessions",
+								"{{sessionId}}",
+								"resume"
+							]
+						},
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{tokenA}}",
+									"type": "string"
+								}
+							]
+						}
+					},
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.test(\"Status 200\", () => pm.response.to.have.status(200));"
+								]
+							}
+						}
+					]
+				},
+				{
+					"name": "Quest recibe session_resume",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "x-device-key",
+								"value": "{{questKey}}",
+								"type": "text"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/api/devices/me/commands",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"devices",
+								"me",
+								"commands"
+							]
+						},
+						"auth": {
+							"type": "noauth"
+						}
+					},
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.test(\"Status 200\", () => pm.response.to.have.status(200));",
+									"const j = pm.response.json();",
+									"const c = (j.commands || []).find(x => x.commandType === \"session_resume\");",
+									"pm.test(\"Incluye comando session_resume\", () => pm.expect(c, JSON.stringify(j)).to.exist);",
+									"if (c) pm.environment.set(\"commandId\", c.id || c._id);"
+								]
+							}
+						}
+					]
+				},
+				{
+					"name": "Quest confirma comando",
+					"request": {
+						"method": "PATCH",
+						"header": [
+							{
+								"key": "x-device-key",
+								"value": "{{questKey}}",
+								"type": "text"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/api/devices/me/commands/{{commandId}}/executed",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"devices",
+								"me",
+								"commands",
+								"{{commandId}}",
+								"executed"
+							]
+						},
+						"auth": {
+							"type": "noauth"
+						}
+					},
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.test(\"Status 200\", () => pm.response.to.have.status(200));"
+								]
+							}
+						}
+					]
+				},
+				{
+					"name": "Sesión reanudada",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/api/sessions/{{sessionId}}",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"sessions",
+								"{{sessionId}}"
+							]
+						},
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{tokenA}}",
+									"type": "string"
+								}
+							]
+						}
+					},
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.test(\"Status 200\", () => pm.response.to.have.status(200));",
+									"const s = pm.response.json();",
+									"pm.test(\"en_curso\", () => pm.expect(s.status).to.eql(\"en_curso\"));",
+									"pm.test(\"Pausa cerrada\", () => pm.expect(s.pauses[0].end).to.not.eql(null));",
+									"pm.test(\"startTime no cambió\", () => pm.expect(s.startTime).to.eql(pm.environment.get(\"startTimeSnapshot\")));"
+								]
+							}
+						}
+					]
+				},
+				{
+					"name": "Terminar",
+					"request": {
+						"method": "POST",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/api/sessions/{{sessionId}}/end",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"sessions",
+								"{{sessionId}}",
+								"end"
+							]
+						},
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{tokenA}}",
+									"type": "string"
+								}
+							]
+						}
+					},
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.test(\"Status 200\", () => pm.response.to.have.status(200));"
+								]
+							}
+						}
+					]
+				},
+				{
+					"name": "Quest recibe session_end",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "x-device-key",
+								"value": "{{questKey}}",
+								"type": "text"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/api/devices/me/commands",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"devices",
+								"me",
+								"commands"
+							]
+						},
+						"auth": {
+							"type": "noauth"
+						}
+					},
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.test(\"Status 200\", () => pm.response.to.have.status(200));",
+									"const j = pm.response.json();",
+									"const c = (j.commands || []).find(x => x.commandType === \"session_end\");",
+									"pm.test(\"Incluye comando session_end\", () => pm.expect(c, JSON.stringify(j)).to.exist);",
+									"if (c) pm.environment.set(\"commandId\", c.id || c._id);"
+								]
+							}
+						}
+					]
+				},
+				{
+					"name": "Quest confirma comando",
+					"request": {
+						"method": "PATCH",
+						"header": [
+							{
+								"key": "x-device-key",
+								"value": "{{questKey}}",
+								"type": "text"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/api/devices/me/commands/{{commandId}}/executed",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"devices",
+								"me",
+								"commands",
+								"{{commandId}}",
+								"executed"
+							]
+						},
+						"auth": {
+							"type": "noauth"
+						}
+					},
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.test(\"Status 200\", () => pm.response.to.have.status(200));"
+								]
+							}
+						}
+					]
+				},
+				{
+					"name": "Sesión finalizada",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/api/sessions/{{sessionId}}",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"sessions",
+								"{{sessionId}}"
+							]
+						},
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{tokenA}}",
+									"type": "string"
+								}
+							]
+						}
+					},
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.test(\"Status 200\", () => pm.response.to.have.status(200));",
+									"const s = pm.response.json();",
+									"pm.test(\"finalizada\", () => pm.expect(s.status).to.eql(\"finalizada\"));",
+									"pm.test(\"endTime registrado\", () => pm.expect(s.endTime).to.not.eql(null));",
+									"pm.test(\"Duración calculada\", () => pm.expect(s.durationMinutes).to.be.a(\"number\"));"
+								]
+							}
+						}
+					]
+				},
+				{
+					"name": "Reloj: ya no hay sesión activa",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "x-device-key",
+								"value": "{{watchKey}}",
+								"type": "text"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/api/sessions/active",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"sessions",
+								"active"
+							]
+						},
+						"auth": {
+							"type": "noauth"
+						}
+					},
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.test(\"Status 404\", () => pm.response.to.have.status(404));"
+								]
+							}
+						}
+					]
+				},
+				{
+					"name": "Reloj envía datos a sesión cerrada",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "x-device-key",
+								"value": "{{watchKey}}",
+								"type": "text"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/api/biometrics/{{sessionId}}",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"biometrics",
+								"{{sessionId}}"
+							]
+						},
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"readings\": [\n    {\n      \"timestamp\": \"{{$isoTimestamp}}\",\n      \"heartRate\": 80\n    }\n  ]\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"auth": {
+							"type": "noauth"
+						}
+					},
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.test(\"Status 409\", () => pm.response.to.have.status(409));"
+								]
+							}
+						}
+					]
+				},
+				{
+					"name": "Pausar sesión finalizada",
+					"request": {
+						"method": "POST",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/api/sessions/{{sessionId}}/pause",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"sessions",
+								"{{sessionId}}",
+								"pause"
+							]
+						},
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{tokenA}}",
+									"type": "string"
+								}
+							]
+						}
+					},
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.test(\"Status 409\", () => pm.response.to.have.status(409));"
+								]
+							}
+						}
+					]
+				},
+				{
+					"name": "Quest vuelve al Lobby",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "x-device-key",
+								"value": "{{questKey}}",
+								"type": "text"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/api/devices/me/commands",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"devices",
+								"me",
+								"commands"
+							]
+						},
+						"auth": {
+							"type": "noauth"
+						}
+					},
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.test(\"Status 200\", () => pm.response.to.have.status(200));",
+									"const j = pm.response.json();",
+									"pm.test(\"Sin sesión ni comandos\", () => { pm.expect(j.session).to.eql(null); pm.expect(j.commands.length).to.eql(0); });"
+								]
+							}
+						}
+					]
+				},
+				{
+					"name": "Borrar sesión realizada",
+					"request": {
+						"method": "DELETE",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/api/sessions/{{sessionId}}",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"sessions",
+								"{{sessionId}}"
+							]
+						},
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{tokenA}}",
+									"type": "string"
+								}
+							]
+						}
+					},
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.test(\"Status 409\", () => pm.response.to.have.status(409));"
+								]
+							}
+						}
+					]
+				},
+				{
+					"name": "Resumen biométrico",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/api/biometrics/session/{{sessionId}}/summary",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"biometrics",
+								"session",
+								"{{sessionId}}",
+								"summary"
+							]
+						},
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{tokenA}}",
+									"type": "string"
+								}
+							]
+						}
+					},
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.test(\"Status 200\", () => pm.response.to.have.status(200));",
+									"pm.test(\"4 lecturas guardadas (2 + 1 + 1 en pausa)\", () => pm.expect(pm.response.json().totalReadings).to.eql(4));"
+								]
+							}
+						}
+					]
+				}
+			]
+		},
+		{
+			"name": "06 Cierres manuales y reglas",
+			"item": [
+				{
+					"name": "Crear sesión auxiliar",
+					"request": {
+						"method": "POST",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/api/sessions",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"sessions"
+							]
+						},
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"patient\": \"{{patientId}}\"\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{tokenA}}",
+									"type": "string"
+								}
+							]
+						}
+					},
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.test(\"Status 201\", () => pm.response.to.have.status(201));",
+									"pm.environment.set(\"sessionTmp\", pm.response.json().session._id);"
+								]
+							}
+						}
+					]
+				},
+				{
+					"name": "PATCH genérico no controla el ciclo",
+					"request": {
+						"method": "PATCH",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/api/sessions/{{sessionTmp}}",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"sessions",
+								"{{sessionTmp}}"
+							]
+						},
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"status\": \"cargando\"\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{tokenA}}",
+									"type": "string"
+								}
+							]
+						}
+					},
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.test(\"Status 400\", () => pm.response.to.have.status(400));"
+								]
+							}
+						}
+					]
+				},
+				{
+					"name": "Finalizar sin haber iniciado",
+					"request": {
+						"method": "PATCH",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/api/sessions/{{sessionTmp}}",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"sessions",
+								"{{sessionTmp}}"
+							]
+						},
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"status\": \"finalizada\"\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{tokenA}}",
+									"type": "string"
+								}
+							]
+						}
+					},
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.test(\"Status 409\", () => pm.response.to.have.status(409));"
+								]
+							}
+						}
+					]
+				},
+				{
+					"name": "Cancelar sesión programada",
+					"request": {
+						"method": "PATCH",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/api/sessions/{{sessionTmp}}",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"sessions",
+								"{{sessionTmp}}"
+							]
+						},
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"status\": \"cancelada\"\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{tokenA}}",
+									"type": "string"
+								}
+							]
+						}
+					},
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.test(\"Status 200\", () => pm.response.to.have.status(200));"
+								]
+							}
+						}
+					]
+				},
+				{
+					"name": "Borrar sesión cancelada",
+					"request": {
+						"method": "DELETE",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/api/sessions/{{sessionTmp}}",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"sessions",
+								"{{sessionTmp}}"
+							]
+						},
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{tokenA}}",
+									"type": "string"
+								}
+							]
+						}
+					},
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.test(\"Status 200\", () => pm.response.to.have.status(200));"
+								]
+							}
+						}
+					]
+				},
+				{
+					"name": "Crear sesión (cancelar mientras carga)",
+					"request": {
+						"method": "POST",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/api/sessions",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"sessions"
+							]
+						},
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"patient\": \"{{patientId}}\"\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{tokenA}}",
+									"type": "string"
+								}
+							]
+						}
+					},
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.test(\"Status 201\", () => pm.response.to.have.status(201));",
+									"pm.environment.set(\"sessionTmp\", pm.response.json().session._id);"
+								]
+							}
+						}
+					]
+				},
+				{
+					"name": "Quest heartbeat (queda online)",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "x-device-key",
+								"value": "{{questKey}}",
+								"type": "text"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/api/devices/me/commands",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"devices",
+								"me",
+								"commands"
+							]
+						},
+						"auth": {
+							"type": "noauth"
+						}
+					},
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.test(\"Status 200\", () => pm.response.to.have.status(200));"
+								]
+							}
+						}
+					]
+				},
+				{
+					"name": "Iniciar sesión (start)",
+					"request": {
+						"method": "POST",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/api/sessions/{{sessionTmp}}/start",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"sessions",
+								"{{sessionTmp}}",
+								"start"
+							]
+						},
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"scenarioId\": \"{{scenarioNicto}}\",\n  \"deviceId\": \"{{questDeviceId}}\",\n  \"watchDeviceId\": \"{{watchDeviceId}}\"\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{tokenA}}",
+									"type": "string"
+								}
+							]
+						}
+					},
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.test(\"Status 200\", () => pm.response.to.have.status(200));"
+								]
+							}
+						}
+					]
+				},
+				{
+					"name": "Cancelar mientras carga",
+					"request": {
+						"method": "PATCH",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/api/sessions/{{sessionTmp}}",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"sessions",
+								"{{sessionTmp}}"
+							]
+						},
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"status\": \"cancelada\"\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{tokenA}}",
+									"type": "string"
+								}
+							]
+						}
+					},
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.test(\"Status 200\", () => pm.response.to.have.status(200));"
+								]
+							}
+						}
+					]
+				},
+				{
+					"name": "Quest: comandos cancelados",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "x-device-key",
+								"value": "{{questKey}}",
+								"type": "text"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/api/devices/me/commands",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"devices",
+								"me",
+								"commands"
+							]
+						},
+						"auth": {
+							"type": "noauth"
+						}
+					},
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.test(\"Status 200\", () => pm.response.to.have.status(200));",
+									"const j = pm.response.json();",
+									"pm.test(\"Sin sesión ni comandos\", () => { pm.expect(j.session).to.eql(null); pm.expect(j.commands.length).to.eql(0); });"
+								]
+							}
+						}
+					]
+				},
+				{
+					"name": "Crear sesión (una activa por paciente)",
+					"request": {
+						"method": "POST",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/api/sessions",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"sessions"
+							]
+						},
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"patient\": \"{{patientId}}\"\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{tokenA}}",
+									"type": "string"
+								}
+							]
+						}
+					},
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.test(\"Status 201\", () => pm.response.to.have.status(201));",
+									"pm.environment.set(\"sessionTmp\", pm.response.json().session._id);"
+								]
+							}
+						}
+					]
+				},
+				{
+					"name": "Quest heartbeat (queda online)",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "x-device-key",
+								"value": "{{questKey}}",
+								"type": "text"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/api/devices/me/commands",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"devices",
+								"me",
+								"commands"
+							]
+						},
+						"auth": {
+							"type": "noauth"
+						}
+					},
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.test(\"Status 200\", () => pm.response.to.have.status(200));"
+								]
+							}
+						}
+					]
+				},
+				{
+					"name": "Iniciar sesión (start)",
+					"request": {
+						"method": "POST",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/api/sessions/{{sessionTmp}}/start",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"sessions",
+								"{{sessionTmp}}",
+								"start"
+							]
+						},
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"scenarioId\": \"{{scenarioNicto}}\",\n  \"deviceId\": \"{{questDeviceId}}\",\n  \"watchDeviceId\": \"{{watchDeviceId}}\"\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{tokenA}}",
+									"type": "string"
+								}
+							]
+						}
+					},
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.test(\"Status 200\", () => pm.response.to.have.status(200));"
+								]
+							}
+						}
+					]
+				},
+				{
+					"name": "Quest recibe load_scenario",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "x-device-key",
+								"value": "{{questKey}}",
+								"type": "text"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/api/devices/me/commands",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"devices",
+								"me",
+								"commands"
+							]
+						},
+						"auth": {
+							"type": "noauth"
+						}
+					},
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.test(\"Status 200\", () => pm.response.to.have.status(200));",
+									"const j = pm.response.json();",
+									"const c = (j.commands || []).find(x => x.commandType === \"load_scenario\");",
+									"pm.test(\"Incluye comando load_scenario\", () => pm.expect(c, JSON.stringify(j)).to.exist);",
+									"if (c) pm.environment.set(\"commandId\", c.id || c._id);"
+								]
+							}
+						}
+					]
+				},
+				{
+					"name": "Quest confirma comando",
+					"request": {
+						"method": "PATCH",
+						"header": [
+							{
+								"key": "x-device-key",
+								"value": "{{questKey}}",
+								"type": "text"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/api/devices/me/commands/{{commandId}}/executed",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"devices",
+								"me",
+								"commands",
+								"{{commandId}}",
+								"executed"
+							]
+						},
+						"auth": {
+							"type": "noauth"
+						}
+					},
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.test(\"Status 200\", () => pm.response.to.have.status(200));"
+								]
+							}
+						}
+					]
+				},
+				{
+					"name": "Crear segunda sesión",
+					"request": {
+						"method": "POST",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/api/sessions",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"sessions"
+							]
+						},
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"patient\": \"{{patientId}}\"\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{tokenA}}",
+									"type": "string"
+								}
+							]
+						}
+					},
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.test(\"Status 201\", () => pm.response.to.have.status(201));",
+									"pm.environment.set(\"sessionTmp2\", pm.response.json().session._id);"
+								]
+							}
+						}
+					]
+				},
+				{
+					"name": "Iniciar segunda sesión simultánea",
+					"request": {
+						"method": "POST",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/api/sessions/{{sessionTmp2}}/start",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"sessions",
+								"{{sessionTmp2}}",
+								"start"
+							]
+						},
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"scenarioId\": \"{{scenarioNicto}}\",\n  \"deviceId\": \"{{questDeviceId}}\",\n  \"watchDeviceId\": \"{{watchDeviceId}}\"\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{tokenA}}",
+									"type": "string"
+								}
+							]
+						}
+					},
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.test(\"Status 409\", () => pm.response.to.have.status(409));"
+								]
+							}
+						}
+					]
+				},
+				{
+					"name": "Terminar desde otro dispositivo (cierre manual)",
+					"request": {
+						"method": "PATCH",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/api/sessions/{{sessionTmp}}",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"sessions",
+								"{{sessionTmp}}"
+							]
+						},
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"status\": \"finalizada\"\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{tokenA}}",
+									"type": "string"
+								}
+							]
+						}
+					},
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.test(\"Status 200\", () => pm.response.to.have.status(200));",
+									"pm.test(\"Duración calculada\", () => pm.expect(pm.response.json().session.durationMinutes).to.be.a(\"number\"));"
+								]
+							}
+						}
+					]
+				},
+				{
+					"name": "Cancelar la segunda sesión",
+					"request": {
+						"method": "PATCH",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/api/sessions/{{sessionTmp2}}",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"sessions",
+								"{{sessionTmp2}}"
+							]
+						},
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"status\": \"cancelada\"\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{tokenA}}",
+									"type": "string"
+								}
+							]
+						}
+					},
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.test(\"Status 200\", () => pm.response.to.have.status(200));"
+								]
+							}
+						}
+					]
+				},
+				{
+					"name": "Crear sesión (falla de carga)",
+					"request": {
+						"method": "POST",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/api/sessions",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"sessions"
+							]
+						},
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"patient\": \"{{patientId}}\"\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{tokenA}}",
+									"type": "string"
+								}
+							]
+						}
+					},
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.test(\"Status 201\", () => pm.response.to.have.status(201));",
+									"pm.environment.set(\"sessionTmp\", pm.response.json().session._id);"
+								]
+							}
+						}
+					]
+				},
+				{
+					"name": "Quest heartbeat (queda online)",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "x-device-key",
+								"value": "{{questKey}}",
+								"type": "text"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/api/devices/me/commands",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"devices",
+								"me",
+								"commands"
+							]
+						},
+						"auth": {
+							"type": "noauth"
+						}
+					},
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.test(\"Status 200\", () => pm.response.to.have.status(200));"
+								]
+							}
+						}
+					]
+				},
+				{
+					"name": "Iniciar sesión (start)",
+					"request": {
+						"method": "POST",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/api/sessions/{{sessionTmp}}/start",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"sessions",
+								"{{sessionTmp}}",
+								"start"
+							]
+						},
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"scenarioId\": \"{{scenarioNicto}}\",\n  \"deviceId\": \"{{questDeviceId}}\",\n  \"watchDeviceId\": \"{{watchDeviceId}}\"\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{tokenA}}",
+									"type": "string"
+								}
+							]
+						}
+					},
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.test(\"Status 200\", () => pm.response.to.have.status(200));"
+								]
+							}
+						}
+					]
+				},
+				{
+					"name": "Quest recibe load_scenario",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "x-device-key",
+								"value": "{{questKey}}",
+								"type": "text"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/api/devices/me/commands",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"devices",
+								"me",
+								"commands"
+							]
+						},
+						"auth": {
+							"type": "noauth"
+						}
+					},
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.test(\"Status 200\", () => pm.response.to.have.status(200));",
+									"const j = pm.response.json();",
+									"const c = (j.commands || []).find(x => x.commandType === \"load_scenario\");",
+									"pm.test(\"Incluye comando load_scenario\", () => pm.expect(c, JSON.stringify(j)).to.exist);",
+									"if (c) pm.environment.set(\"commandId\", c.id || c._id);"
+								]
+							}
+						}
+					]
+				},
+				{
+					"name": "Quest reporta que no pudo cargar",
+					"request": {
+						"method": "PATCH",
+						"header": [
+							{
+								"key": "x-device-key",
+								"value": "{{questKey}}",
+								"type": "text"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/api/devices/me/commands/{{commandId}}/failed",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"devices",
+								"me",
+								"commands",
+								"{{commandId}}",
+								"failed"
+							]
+						},
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"reason\": \"Mapa no encontrado\"\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"auth": {
+							"type": "noauth"
+						}
+					},
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.test(\"Status 200\", () => pm.response.to.have.status(200));"
+								]
+							}
+						}
+					]
+				},
+				{
+					"name": "La sesión queda cancelada",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/api/sessions/{{sessionTmp}}",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"sessions",
+								"{{sessionTmp}}"
+							]
+						},
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{tokenA}}",
+									"type": "string"
+								}
+							]
+						}
+					},
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.test(\"Status 200\", () => pm.response.to.have.status(200));",
+									"pm.test(\"cancelada\", () => pm.expect(pm.response.json().status).to.eql(\"cancelada\"));"
+								]
+							}
+						}
+					]
+				}
+			]
+		},
+		{
+			"name": "07 Aislamiento y permisos",
+			"item": [
+				{
+					"name": "B no ve biométricos de A",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/api/biometrics/session/{{sessionId}}",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"biometrics",
+								"session",
+								"{{sessionId}}"
+							]
+						},
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{tokenB}}",
+									"type": "string"
+								}
+							]
+						}
+					},
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.test(\"Status 403\", () => pm.response.to.have.status(403));"
+								]
+							}
+						}
+					]
+				},
+				{
+					"name": "B no controla sesiones de A",
+					"request": {
+						"method": "POST",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/api/sessions/{{sessionId}}/pause",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"sessions",
+								"{{sessionId}}",
+								"pause"
+							]
+						},
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{tokenB}}",
+									"type": "string"
+								}
+							]
+						}
+					},
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.test(\"Status 403\", () => pm.response.to.have.status(403));"
+								]
+							}
+						}
+					]
+				},
+				{
+					"name": "Paciente no lista sesiones",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/api/sessions",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"sessions"
+							]
+						},
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{tokenPaciente}}",
+									"type": "string"
+								}
+							]
+						}
+					},
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.test(\"Status 403\", () => pm.response.to.have.status(403));"
+								]
+							}
+						}
+					]
+				},
+				{
+					"name": "Terapeuta no crea environments",
+					"request": {
+						"method": "POST",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/api/environments",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"environments"
+							]
+						},
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"name\": \"prueba\",\n  \"displayName\": \"Prueba\"\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{tokenA}}",
+									"type": "string"
+								}
+							]
+						}
+					},
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.test(\"Status 403\", () => pm.response.to.have.status(403));"
+								]
+							}
+						}
+					]
+				},
+				{
+					"name": "Terapeuta ve solo sus sesiones",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/api/sessions",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"sessions"
+							]
+						},
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{tokenA}}",
+									"type": "string"
+								}
+							]
+						}
+					},
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.test(\"Status 200\", () => pm.response.to.have.status(200));",
+									"const me = pm.environment.get(\"therapistAId\");",
+									"pm.test(\"Todas son del terapeuta A\", () => pm.response.json().forEach(s => pm.expect(String(s.therapist._id || s.therapist)).to.eql(me)));"
+								]
+							}
+						}
+					]
+				},
+				{
+					"name": "Quest no usa el endpoint del reloj",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "x-device-key",
+								"value": "{{questKey}}",
+								"type": "text"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/api/sessions/active",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"sessions",
+								"active"
+							]
+						},
+						"auth": {
+							"type": "noauth"
+						}
+					},
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.test(\"Status 404\", () => pm.response.to.have.status(404));"
+								]
+							}
+						}
+					]
+				},
+				{
+					"name": "Reloj no usa el endpoint del Quest",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "x-device-key",
+								"value": "{{watchKey}}",
+								"type": "text"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/api/devices/me/commands",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"devices",
+								"me",
+								"commands"
+							]
+						},
+						"auth": {
+							"type": "noauth"
+						}
+					},
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.test(\"Status 403\", () => pm.response.to.have.status(403));"
+								]
+							}
+						}
+					]
+				},
+				{
+					"name": "Sin API key",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/api/devices/me/commands",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"devices",
+								"me",
+								"commands"
+							]
+						},
+						"auth": {
+							"type": "noauth"
+						}
+					},
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.test(\"Status 401\", () => pm.response.to.have.status(401));"
+								]
+							}
+						}
+					]
+				}
+			]
+		},
+		{
+			"name": "Día 4",
+			"item": [
+				{
+					"name": "Login con correo en mayúsculas y espacios",
+					"event": [
+						{
+							"listen": "prerequest",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.variables.set(\"emailAMessy\", \"  \" + pm.environment.get(\"emailA\").toUpperCase() + \"  \");"
+								]
+							}
+						},
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.test(\"Status 200\", () => pm.response.to.have.status(200));",
+									"pm.test(\"Devuelve token\", () => pm.expect(pm.response.json().token).to.be.a(\"string\"));"
+								]
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/api/auth/login",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"auth",
+								"login"
+							]
+						},
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"email\": \"{{emailAMessy}}\",\n  \"password\": \"{{passA}}\"\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						}
+					}
+				},
+				{
+					"name": "Historial de comandos propio",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.test(\"Status 200\", () => pm.response.to.have.status(200));",
+									"const j = pm.response.json();",
+									"pm.test(\"Es un arreglo no vacío\", () => { pm.expect(j).to.be.an(\"array\"); pm.expect(j.length).to.be.above(0); });",
+									"pm.test(\"Ordenado por createdAt ascendente\", () => {",
+									"  for (let i = 1; i < j.length; i++) pm.expect(new Date(j[i].createdAt) >= new Date(j[i - 1].createdAt)).to.be.true;",
+									"});",
+									"pm.test(\"Trae los campos del historial\", () => {",
+									"  [\"_id\", \"commandType\", \"payload\", \"status\", \"failureReason\", \"createdAt\", \"executedAt\"].forEach(k => pm.expect(j[0]).to.have.property(k));",
+									"});",
+									"pm.test(\"Empieza con load_scenario\", () => pm.expect(j[0].commandType).to.eql(\"load_scenario\"));"
+								]
+							}
+						}
+					],
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/api/sessions/{{sessionId}}/command",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"sessions",
+								"{{sessionId}}",
+								"command"
+							]
+						},
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{tokenA}}",
+									"type": "string"
+								}
+							]
+						}
+					}
+				},
+				{
+					"name": "Historial de comandos ajeno",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.test(\"Status 403\", () => pm.response.to.have.status(403));"
+								]
+							}
+						}
+					],
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/api/sessions/{{sessionId}}/command",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"sessions",
+								"{{sessionId}}",
+								"command"
+							]
+						},
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{tokenB}}",
+									"type": "string"
+								}
+							]
+						}
+					}
+				}
+			]
+		}
+	]
+}
