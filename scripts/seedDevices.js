@@ -2,9 +2,9 @@
 // Upsert de los dispositivos base. La apiKey se genera solo al crear el
 // dispositivo; si ya existe se conserva (el reloj / UE5 ya la tienen
 // configurada) junto con su patient.
-require('dotenv').config();
 const crypto = require('crypto');
 const mongoose = require('mongoose');
+const { mongoUri } = require('../src/config/env');
 const Device = require('../src/models/Device');
 
 const DEVICES = [
@@ -12,9 +12,11 @@ const DEVICES = [
   { deviceId: 'WATCH-TEST-001', type: 'watch', name: 'Galaxy Watch 1' }
 ];
 
-async function run() {
-  await mongoose.connect(process.env.MONGO_URI);
-
+// Requiere una conexión de mongoose abierta (la reutiliza seedCloud.js).
+// Devuelve los dispositivos con su apiKey: cada base genera las suyas, así las
+// de la nube nunca coinciden con las locales.
+async function seedDevices() {
+  const result = [];
   for (const d of DEVICES) {
     const existed = await Device.exists({ deviceId: d.deviceId });
 
@@ -28,13 +30,22 @@ async function run() {
     );
 
     console.log(`${existed ? '= existente' : '+ creado'}  ${device.deviceId}  (${device.type})`);
-    console.log(`  apiKey: ${device.apiKey}`);
+    result.push({ deviceId: device.deviceId, type: device.type, name: device.name, apiKey: device.apiKey, created: !existed });
   }
-
-  process.exit(0);
+  return result;
 }
 
-run().catch(err => {
-  console.error('Error en seed de dispositivos:', err);
-  process.exit(1);
-});
+module.exports = { seedDevices };
+
+if (require.main === module) {
+  mongoose.connect(mongoUri)
+    .then(seedDevices)
+    .then((devices) => {
+      devices.forEach(d => console.log(`  ${d.deviceId} apiKey: ${d.apiKey}`));
+      process.exit(0);
+    })
+    .catch(err => {
+      console.error('Error en seed de dispositivos:', err);
+      process.exit(1);
+    });
+}

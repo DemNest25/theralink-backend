@@ -1,12 +1,14 @@
 const User = require('../models/User');
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
+const env = require('../config/env');
+const { INACTIVE_ACCOUNT } = require('../middleware/auth.middleware');
 
 const generateToken = (user) => {
   return jwt.sign(
     { id: user._id, role: user.role },
-    process.env.JWT_SECRET,
-    { expiresIn: process.env.JWT_EXPIRES_IN }
+    env.jwtSecret,
+    { expiresIn: env.jwtExpiresIn }
   );
 };
 
@@ -27,13 +29,22 @@ const login = async (req, res, next) => {
     const email = String(req.body.email || '').trim().toLowerCase();
 
     const user = await User.findOne({ email });
-    if (!user || user.isActive === false) {
+    if (!user) {
       return res.status(401).json({ message: 'Credenciales inválidas' });
     }
 
+    // La contraseña se verifica antes de mirar el estado: sin ella no se revela
+    // si una cuenta ajena está dada de baja
     const isMatch = await bcrypt.compare(password, user.password);
     if (!isMatch) {
       return res.status(401).json({ message: 'Credenciales inválidas' });
+    }
+
+    if (user.isActive === false) {
+      // Paciente dado de baja: mensaje propio; staff inactivo, igual que antes
+      return user.role === 'patient'
+        ? res.status(403).json(INACTIVE_ACCOUNT)
+        : res.status(401).json({ message: 'Credenciales inválidas' });
     }
 
     res.json({

@@ -1,6 +1,14 @@
 const jwt = require('jsonwebtoken');
+const User = require('../models/User');
+const env = require('../config/env');
 
-const protect = (req, res, next) => {
+// Mismo cuerpo que el 403 del login: el frontend cierra la sesión al recibirlo
+const INACTIVE_ACCOUNT = {
+  code: 'CUENTA_INACTIVA',
+  message: 'Tu cuenta está inactiva. Comunícate con tu terapeuta.'
+};
+
+const protect = async (req, res, next) => {
   const authHeader = req.headers.authorization;
 
   if (!authHeader || !authHeader.startsWith('Bearer ')) {
@@ -9,13 +17,30 @@ const protect = (req, res, next) => {
 
   const token = authHeader.split(' ')[1];
 
+  let decoded;
   try {
-    const decoded = jwt.verify(token, process.env.JWT_SECRET);
-    req.user = decoded; // { id, role } disponible en todos los controllers
-    next();
+    decoded = jwt.verify(token, env.jwtSecret);
   } catch (err) {
     return res.status(401).json({ message: 'Token inválido o expirado' });
   }
+
+  // Un paciente dado de baja pierde el acceso aunque su token siga vigente
+  if (decoded.role === 'patient') {
+    try {
+      const user = await User.findById(decoded.id).select('isActive').lean();
+      if (!user) {
+        return res.status(401).json({ message: 'Cuenta no disponible' });
+      }
+      if (user.isActive === false) {
+        return res.status(403).json(INACTIVE_ACCOUNT);
+      }
+    } catch (err) {
+      return next(err);
+    }
+  }
+
+  req.user = decoded; // { id, role } disponible en todos los controllers
+  next();
 };
 
 const restrictTo = (...roles) => (req, res, next) => {
@@ -25,4 +50,4 @@ const restrictTo = (...roles) => (req, res, next) => {
   next();
 };
 
-module.exports = { protect, restrictTo };
+module.exports = { protect, restrictTo, INACTIVE_ACCOUNT };

@@ -7,8 +7,8 @@
 //   npm run seed:therapist -- --name="Dra. Pérez" --email=perez@theralink.com --password=xxxxxxxx
 //   npm run seed:admin     -- --name="Admin" --email=admin@theralink.com --password=xxxxxxxx
 // o por variables de entorno: STAFF_NAME, STAFF_EMAIL, STAFF_PASSWORD, STAFF_ROLE
-require('dotenv').config();
 const mongoose = require('mongoose');
+const { mongoUri } = require('../src/config/env');
 const User = require('../src/models/User');
 
 function parseArgs() {
@@ -38,7 +38,7 @@ async function run() {
     process.exit(1);
   }
 
-  await mongoose.connect(process.env.MONGO_URI);
+  await mongoose.connect(mongoUri);
 
   const existing = await User.findOne({ email });
   if (existing) {

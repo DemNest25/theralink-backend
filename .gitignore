@@ -1,6 +1,14 @@
 node_modules/
-.env
-.env.local
 *.log
 dist/
 build/
+
+# Variables de entorno y credenciales: nunca se versionan (.env.example sí)
+.env
+.env.*
+!.env.example
+.qa-credentials.md
+.cloud-credentials.md
+
+# Local de Claude Code
+.claude/

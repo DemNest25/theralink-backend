@@ -3,29 +3,31 @@
 // Requiere los Environments (npm run seed:environments) y los mapName reales de
 // UE5 (formato /Game/...) en lugar de "COMPLETAR". Aborta sin escribir nada si
 // falta alguno.
-require('dotenv').config();
 const mongoose = require('mongoose');
+const { mongoUri } = require('../src/config/env');
 const Environment = require('../src/models/Environment');
 const Scenario = require('../src/models/Scenario');
 const scenarios = require('./data/scenarios.json');
 
-async function run() {
+// Valida scripts/data/scenarios.json sin tocar la base: lanza si falta un mapName
+function assertScenarioData() {
   const pending = scenarios.filter(s => !s.mapName || s.mapName.trim() === 'COMPLETAR');
   if (pending.length > 0) {
-    console.error('Abortado: faltan mapName reales en scripts/data/scenarios.json para:');
-    pending.forEach(s => console.error(`  - ${s.key} (sugerido: ${s.mapNameHint || '?'})`));
-    process.exit(1);
+    const list = pending.map(s => `  - ${s.key} (sugerido: ${s.mapNameHint || '?'})`).join('\n');
+    throw new Error(`Abortado: faltan mapName reales en scripts/data/scenarios.json para:\n${list}`);
   }
+}
 
-  await mongoose.connect(process.env.MONGO_URI);
+// Requiere una conexión de mongoose abierta (la reutiliza seedCloud.js)
+async function seedScenarios() {
+  assertScenarioData();
 
   // Resolver todos los Environments antes de escribir nada
   const envByName = {};
   for (const name of [...new Set(scenarios.map(s => s.phobia))]) {
     const env = await Environment.findOne({ name });
     if (!env) {
-      console.error(`Abortado: no existe el Environment '${name}'. Corre npm run seed:environments primero.`);
-      process.exit(1);
+      throw new Error(`Abortado: no existe el Environment '${name}'. Corre npm run seed:environments primero.`);
     }
     envByName[name] = env;
   }
@@ -46,11 +48,18 @@ async function run() {
     );
     console.log(`✓ ${doc.key} (${s.phobia} #${doc.order}) → ${doc._id}`);
   }
-
-  process.exit(0);
 }
 
-run().catch(err => {
-  console.error('Error en seed de escenarios:', err);
-  process.exit(1);
-});
+module.exports = { seedScenarios, assertScenarioData };
+
+if (require.main === module) {
+  Promise.resolve()
+    .then(assertScenarioData)
+    .then(() => mongoose.connect(mongoUri))
+    .then(seedScenarios)
+    .then(() => process.exit(0))
+    .catch(err => {
+      console.error(err.message.startsWith('Abortado') ? err.message : err);
+      process.exit(1);
+    });
+}

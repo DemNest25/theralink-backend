@@ -13,6 +13,7 @@
     "seed:admin": "node scripts/seedStaff.js --role=admin",
     "seed:scenarios": "node scripts/seedScenarios.js",
     "seed:devices": "node scripts/seedDevices.js",
+    "seed:cloud": "node scripts/seedCloud.js",
     "simulate": "node scripts/simulate-devices.js",
     "simulate:watch": "node scripts/simulate-devices.js --only=watch"
   },
@@ -20,6 +21,9 @@
   "author": "",
   "license": "ISC",
   "type": "commonjs",
+  "engines": {
+    "node": ">=20"
+  },
   "dependencies": {
     "bcryptjs": "^3.0.3",
     "cors": "^2.8.6",

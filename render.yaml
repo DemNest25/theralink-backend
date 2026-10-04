@@ -1,0 +1,21 @@
+# Blueprint de Render para el backend (Express + Socket.io).
+# Render → New → Blueprint → elegir este repo. Ver docs/DEPLOY.md.
+services:
+  - type: web
+    name: theralink-backend
+    runtime: node
+    region: virginia
+    plan: free # subir a "starter" en días de prueba/defensa (docs/DEPLOY.md)
+    buildCommand: npm ci
+    startCommand: npm start
+    healthCheckPath: /health
+    envVars:
+      - key: NODE_ENV
+        value: production
+      # sync: false → Render pide el valor al crear el servicio; no se guarda en git
+      - key: MONGODB_URI
+        sync: false
+      - key: JWT_SECRET
+        sync: false
+      - key: CORS_ORIGINS
+        sync: false

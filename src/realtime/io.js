@@ -3,6 +3,7 @@
 // emits son no-ops, y un fallo al emitir nunca rompe la petición HTTP.
 const { Server } = require('socket.io');
 const jwt = require('jsonwebtoken');
+const env = require('../config/env');
 const Scenario = require('../models/Scenario');
 const Device = require('../models/Device');
 const { loadOwnedSession } = require('../utils/ownership');
@@ -16,7 +17,9 @@ const lastOnline = new Map(); // deviceId -> boolean
 const sessionRoom = (sessionId) => `session:${sessionId}`;
 
 function init(server) {
-  io = new Server(server, { cors: { origin: '*' } }); // igual que cors() de Express
+  // Mismos orígenes que cors() de Express. Transportes por defecto (websocket y
+  // polling): detrás del proxy de Render funciona con una sola instancia.
+  io = new Server(server, { cors: { origin: env.corsOrigin } });
 
   // Handshake: JWT en auth.token (navegador) o en el header Authorization
   // "Bearer <token>" (Postman); misma validación y solo therapist
@@ -27,7 +30,7 @@ function init(server) {
       const token = socket.handshake.auth?.token || headerToken;
       if (!token) return next(new Error('Token requerido'));
 
-      const decoded = jwt.verify(token, process.env.JWT_SECRET);
+      const decoded = jwt.verify(token, env.jwtSecret);
       if (decoded.role !== 'therapist') return next(new Error('Solo terapeutas'));
 
       socket.user = decoded;

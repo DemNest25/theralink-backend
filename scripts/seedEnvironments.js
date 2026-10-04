@@ -2,8 +2,8 @@
 // Upsert de los 3 Environments (fobias) que usa la jerarquía de exposición.
 // Cualquier otro Environment que ya exista en la BD queda con isActive:false
 // (no se borra, por si hay Sessions viejas que lo referencian).
-require('dotenv').config();
 const mongoose = require('mongoose');
+const { mongoUri } = require('../src/config/env');
 const Environment = require('../src/models/Environment');
 
 const TARGET_ENVIRONMENTS = [
@@ -27,14 +27,13 @@ const TARGET_ENVIRONMENTS = [
   }
 ];
 
-async function run() {
-  await mongoose.connect(process.env.MONGO_URI);
-
+// Requiere una conexión de mongoose abierta (la reutiliza seedCloud.js)
+async function seedEnvironments() {
   for (const env of TARGET_ENVIRONMENTS) {
     const result = await Environment.findOneAndUpdate(
       { name: env.name },
       { $set: { ...env, isActive: true } },
-      { upsert: true, new: true, setDefaultsOnInsert: true, runValidators: true }
+      { upsert: true, returnDocument: 'after', setDefaultsOnInsert: true, runValidators: true }
     );
     console.log(`✓ ${result.name} → ${result._id}`);
   }
@@ -45,11 +44,16 @@ async function run() {
     { $set: { isActive: false } }
   );
   console.log(`Desactivados (fuera del catálogo nuevo): ${deactivated.modifiedCount}`);
-
-  process.exit(0);
 }
 
-run().catch(err => {
-  console.error('Error en seed de environments:', err);
-  process.exit(1);
-});
+module.exports = { seedEnvironments };
+
+if (require.main === module) {
+  mongoose.connect(mongoUri)
+    .then(seedEnvironments)
+    .then(() => process.exit(0))
+    .catch(err => {
+      console.error('Error en seed de environments:', err);
+      process.exit(1);
+    });
+}

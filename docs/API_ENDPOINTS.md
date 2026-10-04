@@ -5,6 +5,12 @@ autenticado (JWT `Authorization: Bearer <token>`). **Device** = header
 `x-device-key`. Los errores de validación de Mongoose (`ValidationError`,
 `CastError`) responden `400`.
 
+## Estado del servidor
+
+| Método | Ruta | Auth | Rol | Descripción |
+|---|---|---|---|---|
+| GET | `/health` (sin `/api`) | — | — | `{ status: 'ok', db: 'connected'\|'disconnected', uptime }`. `200` con base de datos, `503` sin ella. Lo usan el health check de Render y el "despertador" de la web |
+
 ## Autenticación
 
 | Método | Ruta | Auth | Rol | Descripción |

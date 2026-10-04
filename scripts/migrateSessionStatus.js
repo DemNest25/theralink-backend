@@ -18,7 +18,7 @@ const STATUS_MAP = {
 const STALE_THRESHOLD_MS = 24 * 60 * 60 * 1000;
 
 async function run() {
-  await mongoose.connect(process.env.MONGO_URI);
+  await mongoose.connect(require('../src/config/env').mongoUri);
 
   // Capturar quiénes son 'active' y su updatedAt ANTES de tocarlos — updateMany
   // pisa updatedAt al migrar, así que después ya no serviría para medir abandono.

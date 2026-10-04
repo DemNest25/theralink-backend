@@ -203,3 +203,51 @@ Ejemplos:
     { "commandType": "spider_movement",        "payload": { "action": "start" } }
     { "commandType": "spider_count",           "payload": { "count": 3 } }
     { "commandType": "mri_control",            "payload": { "action": "start" } }
+
+## 8. Cambiar a la nube
+
+El contrato (rutas, cabecera, JSON y reglas) es **idéntico** en local y en la nube.
+Solo cambian dos variables de `BP_TheraLinkGameInstance`
+(`Content/XRFramework/Blueprints`):
+
+| Variable | Local (hotspot, plan B) | Nube (Render) |
+|---|---|---|
+| `BaseUrl` | `http://192.168.137.1:3000/api` | `https://<backend>.onrender.com/api` |
+| `DeviceKey` | la key del Quest en la base local | la key del Quest en la nube |
+
+Reglas:
+
+1. **`BaseUrl` de la nube empieza con `https://`** y termina en `/api`, sin barra
+   final (el Blueprint le agrega `/devices/me/commands`). Render no atiende `http://`:
+   redirige a HTTPS, y en esa redirección las peticiones `PATCH` pueden perderse.
+2. **La `DeviceKey` de la nube es otra.** Sale de `npm run seed:cloud` y queda en
+   `.cloud-credentials.md` (fila "Meta Quest"). Con la key local la nube responde `403`.
+3. No cambia nada más: ni el polling (3 s en el Lobby, 1 s con sesión), ni los
+   `commandType`, ni los `mapName`.
+4. El Quest necesita una **Wi-Fi con salida a internet** (en local bastaba el hotspot).
+
+### Mantener las dos opciones (plan B)
+
+Las variables se compilan en el APK, así que lo más simple y seguro es tener **dos
+APK**, empaquetados uno después del otro cambiando solo esos dos valores por defecto:
+
+* `TheraLink-local.apk` → `BaseUrl` y `DeviceKey` locales.
+* `TheraLink-cloud.apk` → `BaseUrl` y `DeviceKey` de la nube.
+
+Guarda ambos en la laptop. Cambiar de modo es reinstalar el que toque
+(`adb install -r TheraLink-local.apk`, menos de un minuto), sin abrir UE5. No conviene
+dejar un solo APK y editar el Blueprint el día de la defensa.
+
+### Comprobar desde la laptop antes de empaquetar
+
+```bash
+curl -H "x-device-key: <key de la nube>" https://<backend>.onrender.com/api/devices/me/commands
+```
+
+Debe responder `200` con `{ "session": null, "commands": [] }`. En el plan Free de
+Render la primera petición tras 15 minutos sin uso tarda hasta un minuto (el servidor
+está despertando): el polling del visor debe **seguir reintentando** ante un error o
+un timeout, como ya exige la regla 3 de la sección 4.
+
+Si el visor recibe errores de certificado con HTTPS, revisa que la fecha y la hora
+del Quest sean correctas (un reloj desfasado invalida los certificados).
