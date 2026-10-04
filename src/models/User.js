@@ -1,6 +1,9 @@
 // src/models/User.js
 const mongoose = require('mongoose');
 
+const DEACTIVATION_REASONS = ['alta_terapeutica', 'abandono', 'derivacion', 'otro'];
+const DEACTIVATION_NOTE_MAX = 500;
+
 const userSchema = new mongoose.Schema(
   {
     name: {
@@ -49,6 +52,28 @@ const userSchema = new mongoose.Schema(
     isActive: {
       type: Boolean,
       default: true
+    },
+    // Baja lógica del paciente (PATCH /api/patients/:id/deactivate). Se limpian al
+    // reactivar; el historial clínico no se borra nunca.
+    deactivatedAt: {
+      type: Date,
+      default: null
+    },
+    deactivationReason: {
+      type: String,
+      enum: [...DEACTIVATION_REASONS, null],
+      default: null
+    },
+    deactivationNote: {
+      type: String,
+      trim: true,
+      maxlength: DEACTIVATION_NOTE_MAX,
+      default: ''
+    },
+    deactivatedBy: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'User',
+      default: null
     }
   },
   {
@@ -64,3 +89,5 @@ userSchema.pre('save', async function() {
 });
 
 module.exports = mongoose.model('User', userSchema);
+module.exports.DEACTIVATION_REASONS = DEACTIVATION_REASONS;
+module.exports.DEACTIVATION_NOTE_MAX = DEACTIVATION_NOTE_MAX;

@@ -20,6 +20,13 @@ const createSession = async (req, res, next) => {
       return res.status(403).json({ message: 'Este paciente no está asignado a tu usuario' });
     }
 
+    if (patientUser.isActive === false) {
+      return res.status(409).json({
+        code: 'PACIENTE_INACTIVO',
+        message: 'El paciente está dado de baja; reactívalo para programar sesiones'
+      });
+    }
+
     if (!patientUser.phobia) {
       return res.status(400).json({ message: 'El paciente no tiene una fobia (Environment) asignada' });
     }

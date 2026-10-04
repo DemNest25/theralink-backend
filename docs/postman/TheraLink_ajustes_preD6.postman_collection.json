@@ -1,0 +1,1892 @@
+{
+	"info": {
+		"name": "TheraLink - Ajustes pre-D6",
+		"description": "Editar paciente, baja lógica y reactivación. Ejecutar en orden con el Collection Runner, usando el environment 'TheraLink local' (emailA/passA, emailB/passB, questDeviceId/questKey). Crea su propio paciente; no depende de la colección Día 1.",
+		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+	},
+	"item": [
+		{
+			"name": "00 Setup",
+			"item": [
+				{
+					"name": "Login terapeuta A",
+					"request": {
+						"method": "POST",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/api/auth/login",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"auth",
+								"login"
+							]
+						},
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"email\": \"{{emailA}}\",\n  \"password\": \"{{passA}}\"\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"auth": {
+							"type": "noauth"
+						}
+					},
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.test(\"Status 200\", () => pm.response.to.have.status(200));",
+									"const j = pm.response.json();",
+									"pm.environment.set(\"tokenA\", j.token);",
+									"pm.environment.set(\"therapistAId\", j.user.id);"
+								]
+							}
+						}
+					]
+				},
+				{
+					"name": "Login terapeuta B",
+					"request": {
+						"method": "POST",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/api/auth/login",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"auth",
+								"login"
+							]
+						},
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"email\": \"{{emailB}}\",\n  \"password\": \"{{passB}}\"\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"auth": {
+							"type": "noauth"
+						}
+					},
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.test(\"Status 200\", () => pm.response.to.have.status(200));",
+									"pm.environment.set(\"tokenB\", pm.response.json().token);"
+								]
+							}
+						}
+					]
+				},
+				{
+					"name": "Environments activos",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/api/environments",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"environments"
+							]
+						},
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{tokenA}}",
+									"type": "string"
+								}
+							]
+						}
+					},
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.test(\"Status 200\", () => pm.response.to.have.status(200));",
+									"const j = pm.response.json();",
+									"const n = j.find(e => e.name === \"nictofobia\");",
+									"const a = j.find(e => e.name === \"aracnofobia\");",
+									"pm.test(\"Existen nictofobia y aracnofobia\", () => { pm.expect(n).to.be.ok; pm.expect(a).to.be.ok; });",
+									"pm.environment.set(\"envNicto\", n._id);",
+									"pm.environment.set(\"envArac\", a._id);"
+								]
+							}
+						}
+					]
+				},
+				{
+					"name": "Escenarios de nictofobia",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/api/scenarios?environment={{envNicto}}",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"scenarios"
+							],
+							"query": [
+								{
+									"key": "environment",
+									"value": "{{envNicto}}"
+								}
+							]
+						},
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{tokenA}}",
+									"type": "string"
+								}
+							]
+						}
+					},
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.test(\"Status 200\", () => pm.response.to.have.status(200));",
+									"const j = pm.response.json();",
+									"pm.test(\"Hay escenarios\", () => pm.expect(j.length).to.be.above(0));",
+									"pm.environment.set(\"scenarioNicto\", j[0]._id);"
+								]
+							}
+						}
+					]
+				},
+				{
+					"name": "Quest heartbeat",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "x-device-key",
+								"value": "{{questKey}}",
+								"type": "text"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/api/devices/me/commands",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"devices",
+								"me",
+								"commands"
+							]
+						},
+						"auth": {
+							"type": "noauth"
+						}
+					},
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.test(\"Status 200\", () => pm.response.to.have.status(200));"
+								]
+							}
+						}
+					]
+				},
+				{
+					"name": "Crear paciente pre-D6",
+					"request": {
+						"method": "POST",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/api/patients",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"patients"
+							]
+						},
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"name\": \"Paciente Pre D6\",\n  \"email\": \"{{pd6Email}}\",\n  \"password\": \"12345678\",\n  \"phobia\": \"{{envNicto}}\"\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{tokenA}}",
+									"type": "string"
+								}
+							]
+						}
+					},
+					"event": [
+						{
+							"listen": "prerequest",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.collectionVariables.set(\"pd6Email\", `pred6.${Date.now()}@test.theralink`);"
+								]
+							}
+						},
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.test(\"Status 201\", () => pm.response.to.have.status(201));",
+									"pm.collectionVariables.set(\"pd6PatientId\", pm.response.json().patient._id);"
+								]
+							}
+						}
+					]
+				},
+				{
+					"name": "Login paciente pre-D6",
+					"request": {
+						"method": "POST",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/api/auth/login",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"auth",
+								"login"
+							]
+						},
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"email\": \"{{pd6Email}}\",\n  \"password\": \"12345678\"\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"auth": {
+							"type": "noauth"
+						}
+					},
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.test(\"Status 200\", () => pm.response.to.have.status(200));",
+									"pm.collectionVariables.set(\"pd6TokenPaciente\", pm.response.json().token);"
+								]
+							}
+						}
+					]
+				}
+			]
+		},
+		{
+			"name": "01 Editar paciente",
+			"item": [
+				{
+					"name": "Editar nombre y correo",
+					"request": {
+						"method": "PATCH",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/api/patients/{{pd6PatientId}}",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"patients",
+								"{{pd6PatientId}}"
+							]
+						},
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"name\": \"  Paciente Editado  \",\n  \"email\": \"  {{pd6Email}}  \"\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{tokenA}}",
+									"type": "string"
+								}
+							]
+						}
+					},
+					"event": [
+						{
+							"listen": "prerequest",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.collectionVariables.set(\"pd6Email\", `pred6.edit.${Date.now()}@test.theralink`);"
+								]
+							}
+						},
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.test(\"Status 200\", () => pm.response.to.have.status(200));",
+									"const j = pm.response.json();",
+									"pm.test(\"Nombre recortado\", () => pm.expect(j.patient.name).to.eql(\"Paciente Editado\"));",
+									"pm.test(\"Correo normalizado\", () => pm.expect(j.patient.email).to.eql(pm.collectionVariables.get(\"pd6Email\").toLowerCase()));",
+									"pm.test(\"Sin password y con status\", () => { pm.expect(j.patient).to.not.have.property(\"password\"); pm.expect(j.patient.status).to.eql(\"activo\"); });"
+								]
+							}
+						}
+					]
+				},
+				{
+					"name": "Editar con email duplicado",
+					"request": {
+						"method": "PATCH",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/api/patients/{{pd6PatientId}}",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"patients",
+								"{{pd6PatientId}}"
+							]
+						},
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"email\": \"{{emailA}}\"\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{tokenA}}",
+									"type": "string"
+								}
+							]
+						}
+					},
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.test(\"Status 409\", () => pm.response.to.have.status(409));",
+									"pm.test(\"Mensaje de email en uso\", () => pm.expect(pm.response.json().message).to.eql(\"El email ya está registrado\"));"
+								]
+							}
+						}
+					]
+				},
+				{
+					"name": "Editar campos no editables",
+					"request": {
+						"method": "PATCH",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/api/patients/{{pd6PatientId}}",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"patients",
+								"{{pd6PatientId}}"
+							]
+						},
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"password\": \"otraClave123\",\n  \"role\": \"therapist\",\n  \"isActive\": false\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{tokenA}}",
+									"type": "string"
+								}
+							]
+						}
+					},
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.test(\"Status 400\", () => pm.response.to.have.status(400));",
+									"pm.test(\"Lista los campos\", () => pm.expect(pm.response.json().message).to.include(\"password\"));"
+								]
+							}
+						}
+					]
+				},
+				{
+					"name": "Cambiar fobia sin sesiones",
+					"request": {
+						"method": "PATCH",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/api/patients/{{pd6PatientId}}",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"patients",
+								"{{pd6PatientId}}"
+							]
+						},
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"phobia\": \"{{envArac}}\"\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{tokenA}}",
+									"type": "string"
+								}
+							]
+						}
+					},
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.test(\"Status 200\", () => pm.response.to.have.status(200));",
+									"const j = pm.response.json();",
+									"pm.test(\"Fobia nueva\", () => pm.expect(j.patient.phobia._id).to.eql(pm.environment.get(\"envArac\")));"
+								]
+							}
+						}
+					]
+				},
+				{
+					"name": "Volver a nictofobia",
+					"request": {
+						"method": "PATCH",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/api/patients/{{pd6PatientId}}",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"patients",
+								"{{pd6PatientId}}"
+							]
+						},
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"phobia\": \"{{envNicto}}\"\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{tokenA}}",
+									"type": "string"
+								}
+							]
+						}
+					},
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.test(\"Status 200\", () => pm.response.to.have.status(200));"
+								]
+							}
+						}
+					]
+				},
+				{
+					"name": "Terapeuta B no puede editar",
+					"request": {
+						"method": "PATCH",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/api/patients/{{pd6PatientId}}",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"patients",
+								"{{pd6PatientId}}"
+							]
+						},
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"name\": \"Intruso\"\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{tokenB}}",
+									"type": "string"
+								}
+							]
+						}
+					},
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.test(\"Status 404\", () => pm.response.to.have.status(404));"
+								]
+							}
+						}
+					]
+				}
+			]
+		},
+		{
+			"name": "02 Sesión abierta bloquea",
+			"item": [
+				{
+					"name": "Crear sesión",
+					"request": {
+						"method": "POST",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/api/sessions",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"sessions"
+							]
+						},
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"patient\": \"{{pd6PatientId}}\"\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{tokenA}}",
+									"type": "string"
+								}
+							]
+						}
+					},
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.test(\"Status 201\", () => pm.response.to.have.status(201));",
+									"pm.collectionVariables.set(\"pd6SessionOpen\", pm.response.json().session._id);"
+								]
+							}
+						}
+					]
+				},
+				{
+					"name": "Iniciar sesión (queda cargando)",
+					"request": {
+						"method": "POST",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/api/sessions/{{pd6SessionOpen}}/start",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"sessions",
+								"{{pd6SessionOpen}}",
+								"start"
+							]
+						},
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"scenarioId\": \"{{scenarioNicto}}\",\n  \"deviceId\": \"{{questDeviceId}}\"\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{tokenA}}",
+									"type": "string"
+								}
+							]
+						}
+					},
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.test(\"Status 200\", () => pm.response.to.have.status(200));",
+									"pm.test(\"Queda cargando\", () => pm.expect(pm.response.json().session.status).to.eql(\"cargando\"));"
+								]
+							}
+						}
+					]
+				},
+				{
+					"name": "Cambiar fobia con sesión abierta",
+					"request": {
+						"method": "PATCH",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/api/patients/{{pd6PatientId}}",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"patients",
+								"{{pd6PatientId}}"
+							]
+						},
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"phobia\": \"{{envArac}}\"\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{tokenA}}",
+									"type": "string"
+								}
+							]
+						}
+					},
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.test(\"Status 409\", () => pm.response.to.have.status(409));",
+									"pm.test(\"code SESION_ACTIVA\", () => pm.expect(pm.response.json().code).to.eql(\"SESION_ACTIVA\"));"
+								]
+							}
+						}
+					]
+				},
+				{
+					"name": "Dar de baja con sesión abierta",
+					"request": {
+						"method": "PATCH",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/api/patients/{{pd6PatientId}}/deactivate",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"patients",
+								"{{pd6PatientId}}",
+								"deactivate"
+							]
+						},
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"reason\": \"abandono\"\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{tokenA}}",
+									"type": "string"
+								}
+							]
+						}
+					},
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.test(\"Status 409\", () => pm.response.to.have.status(409));",
+									"pm.test(\"code SESION_ACTIVA\", () => pm.expect(pm.response.json().code).to.eql(\"SESION_ACTIVA\"));"
+								]
+							}
+						}
+					]
+				},
+				{
+					"name": "Cancelar la sesión abierta",
+					"request": {
+						"method": "PATCH",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/api/sessions/{{pd6SessionOpen}}",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"sessions",
+								"{{pd6SessionOpen}}"
+							]
+						},
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"status\": \"cancelada\"\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{tokenA}}",
+									"type": "string"
+								}
+							]
+						}
+					},
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.test(\"Status 200\", () => pm.response.to.have.status(200));"
+								]
+							}
+						}
+					]
+				}
+			]
+		},
+		{
+			"name": "03 Dar de baja",
+			"item": [
+				{
+					"name": "Crear sesión programada",
+					"request": {
+						"method": "POST",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/api/sessions",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"sessions"
+							]
+						},
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"patient\": \"{{pd6PatientId}}\"\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{tokenA}}",
+									"type": "string"
+								}
+							]
+						}
+					},
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.test(\"Status 201\", () => pm.response.to.have.status(201));",
+									"pm.collectionVariables.set(\"pd6SessionScheduled\", pm.response.json().session._id);"
+								]
+							}
+						}
+					]
+				},
+				{
+					"name": "Dar de baja sin motivo",
+					"request": {
+						"method": "PATCH",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/api/patients/{{pd6PatientId}}/deactivate",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"patients",
+								"{{pd6PatientId}}",
+								"deactivate"
+							]
+						},
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"note\": \"sin motivo\"\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{tokenA}}",
+									"type": "string"
+								}
+							]
+						}
+					},
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.test(\"Status 400\", () => pm.response.to.have.status(400));"
+								]
+							}
+						}
+					]
+				},
+				{
+					"name": "Dar de baja con motivo inválido",
+					"request": {
+						"method": "PATCH",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/api/patients/{{pd6PatientId}}/deactivate",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"patients",
+								"{{pd6PatientId}}",
+								"deactivate"
+							]
+						},
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"reason\": \"vacaciones\"\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{tokenA}}",
+									"type": "string"
+								}
+							]
+						}
+					},
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.test(\"Status 400\", () => pm.response.to.have.status(400));"
+								]
+							}
+						}
+					]
+				},
+				{
+					"name": "Dar de baja con motivo",
+					"request": {
+						"method": "PATCH",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/api/patients/{{pd6PatientId}}/deactivate",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"patients",
+								"{{pd6PatientId}}",
+								"deactivate"
+							]
+						},
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"reason\": \"alta_terapeutica\",\n  \"note\": \"Completó los tres niveles\"\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{tokenA}}",
+									"type": "string"
+								}
+							]
+						}
+					},
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.test(\"Status 200\", () => pm.response.to.have.status(200));",
+									"const j = pm.response.json();",
+									"pm.test(\"1 sesión programada cancelada\", () => pm.expect(j.cancelledSessions).to.eql(1));",
+									"pm.test(\"Queda inactivo con los datos de la baja\", () => {",
+									"  pm.expect(j.patient.status).to.eql(\"inactivo\");",
+									"  pm.expect(j.patient.isActive).to.eql(false);",
+									"  pm.expect(j.patient.deactivationReason).to.eql(\"alta_terapeutica\");",
+									"  pm.expect(j.patient.deactivationNote).to.eql(\"Completó los tres niveles\");",
+									"  pm.expect(j.patient.deactivatedBy).to.eql(pm.environment.get(\"therapistAId\"));",
+									"  pm.expect(new Date(j.patient.deactivatedAt).getTime()).to.be.above(0);",
+									"});"
+								]
+							}
+						}
+					]
+				},
+				{
+					"name": "La sesión programada quedó cancelada",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/api/sessions/{{pd6SessionScheduled}}",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"sessions",
+								"{{pd6SessionScheduled}}"
+							]
+						},
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{tokenA}}",
+									"type": "string"
+								}
+							]
+						}
+					},
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.test(\"Status 200\", () => pm.response.to.have.status(200));",
+									"const j = pm.response.json();",
+									"pm.test(\"cancelada\", () => pm.expect(j.status).to.eql(\"cancelada\"));",
+									"pm.test(\"Con nota de la baja\", () => pm.expect(j.therapistNotes).to.include(\"Cancelada por baja del paciente\"));"
+								]
+							}
+						}
+					]
+				},
+				{
+					"name": "Dar de baja otra vez",
+					"request": {
+						"method": "PATCH",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/api/patients/{{pd6PatientId}}/deactivate",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"patients",
+								"{{pd6PatientId}}",
+								"deactivate"
+							]
+						},
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"reason\": \"otro\"\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{tokenA}}",
+									"type": "string"
+								}
+							]
+						}
+					},
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.test(\"Status 409\", () => pm.response.to.have.status(409));"
+								]
+							}
+						}
+					]
+				}
+			]
+		},
+		{
+			"name": "04 Efectos de la baja",
+			"item": [
+				{
+					"name": "Login de paciente inactivo",
+					"request": {
+						"method": "POST",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/api/auth/login",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"auth",
+								"login"
+							]
+						},
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"email\": \"{{pd6Email}}\",\n  \"password\": \"12345678\"\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"auth": {
+							"type": "noauth"
+						}
+					},
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.test(\"Status 403\", () => pm.response.to.have.status(403));",
+									"const j = pm.response.json();",
+									"pm.test(\"CUENTA_INACTIVA\", () => pm.expect(j.code).to.eql(\"CUENTA_INACTIVA\"));",
+									"pm.test(\"Sin token\", () => pm.expect(j).to.not.have.property(\"token\"));"
+								]
+							}
+						}
+					]
+				},
+				{
+					"name": "Login de inactivo con contraseña incorrecta",
+					"request": {
+						"method": "POST",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/api/auth/login",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"auth",
+								"login"
+							]
+						},
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"email\": \"{{pd6Email}}\",\n  \"password\": \"incorrecta\"\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"auth": {
+							"type": "noauth"
+						}
+					},
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.test(\"Status 401\", () => pm.response.to.have.status(401));",
+									"pm.test(\"No revela el estado\", () => pm.expect(pm.response.json()).to.not.have.property(\"code\"));"
+								]
+							}
+						}
+					]
+				},
+				{
+					"name": "Token viejo del paciente",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/api/me",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"me"
+							]
+						},
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{pd6TokenPaciente}}",
+									"type": "string"
+								}
+							]
+						}
+					},
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.test(\"Status 403\", () => pm.response.to.have.status(403));",
+									"pm.test(\"CUENTA_INACTIVA\", () => pm.expect(pm.response.json().code).to.eql(\"CUENTA_INACTIVA\"));"
+								]
+							}
+						}
+					]
+				},
+				{
+					"name": "Crear sesión a paciente inactivo",
+					"request": {
+						"method": "POST",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/api/sessions",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"sessions"
+							]
+						},
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"patient\": \"{{pd6PatientId}}\"\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{tokenA}}",
+									"type": "string"
+								}
+							]
+						}
+					},
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.test(\"Status 409\", () => pm.response.to.have.status(409));",
+									"pm.test(\"PACIENTE_INACTIVO\", () => pm.expect(pm.response.json().code).to.eql(\"PACIENTE_INACTIVO\"));"
+								]
+							}
+						}
+					]
+				},
+				{
+					"name": "Restablecer contraseña de inactivo",
+					"request": {
+						"method": "POST",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/api/patients/{{pd6PatientId}}/reset-password",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"patients",
+								"{{pd6PatientId}}",
+								"reset-password"
+							]
+						},
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"password\": \"nuevaClave123\"\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{tokenA}}",
+									"type": "string"
+								}
+							]
+						}
+					},
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.test(\"Status 409\", () => pm.response.to.have.status(409));"
+								]
+							}
+						}
+					]
+				},
+				{
+					"name": "Editar paciente inactivo",
+					"request": {
+						"method": "PATCH",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/api/patients/{{pd6PatientId}}",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"patients",
+								"{{pd6PatientId}}"
+							]
+						},
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"name\": \"No debería\"\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{tokenA}}",
+									"type": "string"
+								}
+							]
+						}
+					},
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.test(\"Status 409\", () => pm.response.to.have.status(409));"
+								]
+							}
+						}
+					]
+				}
+			]
+		},
+		{
+			"name": "05 Listar por estado",
+			"item": [
+				{
+					"name": "Listar (activos por defecto)",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/api/patients",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"patients"
+							]
+						},
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{tokenA}}",
+									"type": "string"
+								}
+							]
+						}
+					},
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.test(\"Status 200\", () => pm.response.to.have.status(200));",
+									"const j = pm.response.json();",
+									"pm.test(\"Sigue siendo un arreglo\", () => pm.expect(j).to.be.an(\"array\"));",
+									"pm.test(\"No incluye al inactivo\", () => pm.expect(j.map(p => p._id)).to.not.include(pm.collectionVariables.get(\"pd6PatientId\")));",
+									"pm.test(\"Todos activos\", () => j.forEach(p => pm.expect(p.status).to.eql(\"activo\")));"
+								]
+							}
+						}
+					]
+				},
+				{
+					"name": "Listar inactivos",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/api/patients?status=inactivo",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"patients"
+							],
+							"query": [
+								{
+									"key": "status",
+									"value": "inactivo"
+								}
+							]
+						},
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{tokenA}}",
+									"type": "string"
+								}
+							]
+						}
+					},
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.test(\"Status 200\", () => pm.response.to.have.status(200));",
+									"const j = pm.response.json();",
+									"const p = j.find(x => x._id === pm.collectionVariables.get(\"pd6PatientId\"));",
+									"pm.test(\"Incluye al inactivo con datos de baja\", () => { pm.expect(p).to.be.ok; pm.expect(p.status).to.eql(\"inactivo\"); pm.expect(p.deactivationReason).to.eql(\"alta_terapeutica\"); pm.expect(p.deactivatedAt).to.be.a(\"string\"); });"
+								]
+							}
+						}
+					]
+				},
+				{
+					"name": "Listar todos con conteos",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/api/patients?status=todos&withCounts=true",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"patients"
+							],
+							"query": [
+								{
+									"key": "status",
+									"value": "todos"
+								},
+								{
+									"key": "withCounts",
+									"value": "true"
+								}
+							]
+						},
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{tokenA}}",
+									"type": "string"
+								}
+							]
+						}
+					},
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.test(\"Status 200\", () => pm.response.to.have.status(200));",
+									"const j = pm.response.json();",
+									"pm.test(\"Formato { patients, counts }\", () => { pm.expect(j.patients).to.be.an(\"array\"); pm.expect(j.counts).to.have.keys(\"activos\", \"inactivos\"); });",
+									"pm.test(\"Conteos cuadran con la lista\", () => {",
+									"  pm.expect(j.counts.activos).to.eql(j.patients.filter(p => p.status === \"activo\").length);",
+									"  pm.expect(j.counts.inactivos).to.eql(j.patients.filter(p => p.status === \"inactivo\").length);",
+									"  pm.expect(j.counts.inactivos).to.be.above(0);",
+									"});"
+								]
+							}
+						}
+					]
+				},
+				{
+					"name": "Listar con status inválido",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/api/patients?status=borrados",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"patients"
+							],
+							"query": [
+								{
+									"key": "status",
+									"value": "borrados"
+								}
+							]
+						},
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{tokenA}}",
+									"type": "string"
+								}
+							]
+						}
+					},
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.test(\"Status 400\", () => pm.response.to.have.status(400));"
+								]
+							}
+						}
+					]
+				}
+			]
+		},
+		{
+			"name": "06 Reactivar",
+			"item": [
+				{
+					"name": "Reactivar",
+					"request": {
+						"method": "PATCH",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/api/patients/{{pd6PatientId}}/reactivate",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"patients",
+								"{{pd6PatientId}}",
+								"reactivate"
+							]
+						},
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{tokenA}}",
+									"type": "string"
+								}
+							]
+						}
+					},
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.test(\"Status 200\", () => pm.response.to.have.status(200));",
+									"const j = pm.response.json();",
+									"pm.test(\"Activo y sin datos de baja\", () => {",
+									"  pm.expect(j.patient.status).to.eql(\"activo\");",
+									"  pm.expect(j.patient.deactivatedAt).to.eql(null);",
+									"  pm.expect(j.patient.deactivationReason).to.eql(null);",
+									"  pm.expect(j.patient.deactivatedBy).to.eql(null);",
+									"});"
+								]
+							}
+						}
+					]
+				},
+				{
+					"name": "Reactivar otra vez",
+					"request": {
+						"method": "PATCH",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/api/patients/{{pd6PatientId}}/reactivate",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"patients",
+								"{{pd6PatientId}}",
+								"reactivate"
+							]
+						},
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{tokenA}}",
+									"type": "string"
+								}
+							]
+						}
+					},
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.test(\"Status 409\", () => pm.response.to.have.status(409));"
+								]
+							}
+						}
+					]
+				},
+				{
+					"name": "Login tras reactivar",
+					"request": {
+						"method": "POST",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/api/auth/login",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"auth",
+								"login"
+							]
+						},
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"email\": \"{{pd6Email}}\",\n  \"password\": \"12345678\"\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"auth": {
+							"type": "noauth"
+						}
+					},
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.test(\"Status 200\", () => pm.response.to.have.status(200));",
+									"pm.collectionVariables.set(\"pd6TokenPaciente\", pm.response.json().token);"
+								]
+							}
+						}
+					]
+				},
+				{
+					"name": "Portal con el token nuevo",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/api/me",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"me"
+							]
+						},
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{pd6TokenPaciente}}",
+									"type": "string"
+								}
+							]
+						}
+					},
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.test(\"Status 200\", () => pm.response.to.have.status(200));"
+								]
+							}
+						}
+					]
+				},
+				{
+					"name": "La sesión cancelada no se restaura",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/api/sessions/{{pd6SessionScheduled}}",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"sessions",
+								"{{pd6SessionScheduled}}"
+							]
+						},
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{tokenA}}",
+									"type": "string"
+								}
+							]
+						}
+					},
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.test(\"Status 200\", () => pm.response.to.have.status(200));",
+									"pm.test(\"Sigue cancelada\", () => pm.expect(pm.response.json().status).to.eql(\"cancelada\"));"
+								]
+							}
+						}
+					]
+				}
+			]
+		}
+	],
+	"variable": [
+		{
+			"key": "pd6Email",
+			"value": ""
+		},
+		{
+			"key": "pd6PatientId",
+			"value": ""
+		},
+		{
+			"key": "pd6TokenPaciente",
+			"value": ""
+		},
+		{
+			"key": "pd6SessionOpen",
+			"value": ""
+		},
+		{
+			"key": "pd6SessionScheduled",
+			"value": ""
+		}
+	]
+}
