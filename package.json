@@ -2,11 +2,11 @@
   "name": "vr-therapy-backend",
   "version": "1.0.0",
   "description": "",
-  "main": "index.js",
+  "main": "src/server.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1",
-    "dev": "nodemon src/app.js",
-    "start": "node src/app.js",
+    "test": "jest --runInBand",
+    "dev": "nodemon src/server.js",
+    "start": "node src/server.js",
     "migrate:session-status": "node scripts/migrateSessionStatus.js",
     "seed:environments": "node scripts/seedEnvironments.js",
     "seed:therapist": "node scripts/seedStaff.js --role=therapist",
@@ -15,7 +15,8 @@
     "seed:devices": "node scripts/seedDevices.js",
     "seed:cloud": "node scripts/seedCloud.js",
     "simulate": "node scripts/simulate-devices.js",
-    "simulate:watch": "node scripts/simulate-devices.js --only=watch"
+    "simulate:watch": "node scripts/simulate-devices.js --only=watch",
+    "test:coverage": "jest --runInBand --coverage"
   },
   "keywords": [],
   "author": "",
@@ -34,6 +35,23 @@
     "socket.io": "^4.8.3"
   },
   "devDependencies": {
-    "nodemon": "^3.1.14"
+    "jest": "^30.5.2",
+    "mongodb-memory-server": "^11.3.0",
+    "nodemon": "^3.1.14",
+    "supertest": "^7.3.1"
+  },
+  "jest": {
+    "testEnvironment": "node",
+    "setupFilesAfterEnv": [
+      "./tests/setup.js"
+    ],
+    "testTimeout": 30000,
+    "collectCoverageFrom": [
+      "src/**/*.js",
+      "!src/server.js"
+    ],
+    "setupFiles": [
+      "./tests/env.js"
+    ]
   }
 }
